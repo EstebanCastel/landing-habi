@@ -13,7 +13,7 @@ export default function VoiceAgent({ currentSection, configuration, price }: Voi
   const [isSpeaking, setIsSpeaking] = useState(false);
   const [hasSpoken, setHasSpoken] = useState<Set<string>>(new Set());
   const [testText, setTestText] = useState(
-    '1500 es media hora como maximo tu pones el lugar juanjo'
+    'Hola, soy tu asistente de Habi. Estoy aquí para ayudarte.'
   );
   const audioRef = useRef<HTMLAudioElement | null>(null);
 
