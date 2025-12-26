@@ -1,33 +1,33 @@
-# 🏠 Configurador Habi - Landing Page
+# Configurador Habi - Landing Page
 
 Configurador interactivo para ofertas de compra de inmuebles con diseño inspirado en Tesla y asistente de voz con IA.
 
-## ✨ Características
+## Características
 
-### 🎨 Diseño y UX
+### Diseño y UX
 - **Diseño Tesla-like**: Interfaz minimalista y moderna con degradados morados
 - **Animaciones suaves**: Casa flotante y cards con transiciones elegantes
 - **Precio animado**: Contador dinámico que se anima al cambiar opciones
 - **Responsive**: Optimizado para todos los dispositivos
 
-### 🤖 Asistente de Voz con IA
+### Asistente de Voz con IA
 - **Guía conversacional**: Agente de voz que explica cada sección
 - **Powered by ElevenLabs**: Síntesis de voz natural en español
 - **No intrusivo**: Se puede activar/desactivar fácilmente
 - **Contextual**: Habla según las decisiones del usuario
 
-### ⚙️ Funcionalidades del Configurador
+### Funcionalidades del Configurador
 - **Cards flotantes**: Trámites y remodelación con transiciones
 - **Cálculo dinámico**: Precio actualizado en tiempo real
 - **4 formas de pago**: Contado, 3, 6 y 9 cuotas
 - **Opciones personalizables**: Trámites y remodelación
 
-### 📄 Página de Alternativas
+### Página de Alternativas
 - **Video explicativo**: Costo de oportunidad de no vender con Habi
 - **Folleto descargable**: Guía completa para vender por cuenta propia
 - **Tono empático**: Sin presión, ofreciendo ayuda genuina
 
-## 🚀 Inicio Rápido
+## Inicio Rápido
 
 ### Prerrequisitos
 - Node.js 18+ 
@@ -49,7 +49,7 @@ npm run dev
 
 Abre [http://localhost:3000](http://localhost:3000) en tu navegador.
 
-## 🎤 Configurar Asistente de Voz
+## Configurar Asistente de Voz
 
 ### 1. Obtener API Key de ElevenLabs
 
@@ -82,7 +82,7 @@ ELEVENLABS_VOICE_ID=EXAVITQu4vr4xnSDxMaL
 npm run dev
 ```
 
-## 📂 Estructura del Proyecto
+## Estructura del Proyecto
 
 ```
 tesla/
@@ -117,7 +117,7 @@ tesla/
 └── ENV_SETUP.md                    # Guía de configuración
 ```
 
-## 🎯 Uso del Asistente de Voz
+## Uso del Asistente de Voz
 
 ### Activar/Desactivar
 - Haz clic en el botón flotante en la esquina inferior izquierda
@@ -137,7 +137,7 @@ El asistente habla automáticamente en:
 ### Personalización
 Para personalizar los mensajes, edita el objeto `messages` en `/app/components/VoiceAgent.tsx`.
 
-## 🎨 Personalización de Colores
+## Personalización de Colores
 
 Los colores están centralizados en Tailwind CSS:
 - **Morado principal**: `purple-600` (#9333ea)
@@ -146,7 +146,7 @@ Los colores están centralizados en Tailwind CSS:
 
 Para cambiar, modifica las clases en los componentes.
 
-## 🚢 Deploy
+## Deploy
 
 ### Vercel (Recomendado)
 
@@ -169,7 +169,7 @@ Compatible con cualquier plataforma que soporte Next.js 16:
 - Railway
 - Render
 
-## 📊 Lógica de Precios
+## Lógica de Precios
 
 ### Precio Base
 ```typescript
@@ -187,7 +187,7 @@ precioBase = valorMercado * 0.782  // 78.2% del valor de mercado
 - **Comisión**: 4.4%
 - **Gastos mensuales**: 0.8%
 
-## 🔧 Scripts Disponibles
+## Scripts Disponibles
 
 ```bash
 # Desarrollo
@@ -203,7 +203,7 @@ npm start
 npm run lint
 ```
 
-## 🛠️ Tecnologías
+## Tecnologías
 
 - **Framework**: Next.js 16.1.0 (Turbopack)
 - **UI**: React 19, Tailwind CSS v4
@@ -211,7 +211,7 @@ npm run lint
 - **API de Voz**: ElevenLabs Text-to-Speech
 - **Hosting**: Vercel-ready
 
-## 📝 Notas de Desarrollo
+## Notas de Desarrollo
 
 ### Tailwind CSS v4
 Este proyecto usa Tailwind CSS v4, que tiene sintaxis diferente:
@@ -224,7 +224,7 @@ Las animaciones de flotación usan CSS custom con `@keyframes` en JSX.
 ### Estado Global
 El estado se maneja con React Hooks (useState, useEffect) sin libraries adicionales.
 
-## 🤝 Contribuir
+## Contribuir
 
 1. Fork el proyecto
 2. Crea tu feature branch (`git checkout -b feature/AmazingFeature`)
@@ -232,14 +232,12 @@ El estado se maneja con React Hooks (useState, useEffect) sin libraries adiciona
 4. Push al branch (`git push origin feature/AmazingFeature`)
 5. Abre un Pull Request
 
-## 📄 Licencia
+## Licencia
 
 Este proyecto es propiedad de Habi.
 
-## 🆘 Soporte
+## Soporte
 
 Para preguntas o soporte, contacta al equipo de desarrollo de Habi.
 
 ---
-
-Hecho con 💜 por el equipo de Habi

@@ -60,7 +60,8 @@ export async function POST(request: NextRequest) {
     return new NextResponse(audioBuffer, {
       headers: {
         'Content-Type': 'audio/mpeg',
-        'Cache-Control': 'public, max-age=31536000',
+        // Evitar cachear audio generado a partir de texto del usuario.
+        'Cache-Control': 'no-store',
       },
     });
 
