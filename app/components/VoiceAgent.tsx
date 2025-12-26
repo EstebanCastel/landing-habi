@@ -90,6 +90,35 @@ export default function VoiceAgent({ currentSection, configuration, price }: Voi
     }
   }, [currentSection]);
 
+  // Función para formatear precio en millones
+  const formatPrice = (value: number) => {
+    return (value / 1000000).toFixed(1).replace('.', ',');
+  };
+
+  // Función para generar mensaje de forma de pago
+  const getPaymentMessage = (formaPago: string, precioTotal: number) => {
+    const primeraCuota = precioTotal * 0.5; // 50% primera cuota
+    
+    switch (formaPago) {
+      case '9cuotas': {
+        const cuotaMensual = (precioTotal - primeraCuota) / 9;
+        return `Excelente elección. Con 9 cuotas obtienes el precio máximo: ${formatPrice(precioTotal)} millones. Recibirás ${formatPrice(primeraCuota)} millones como primera cuota, y luego ${formatPrice(cuotaMensual)} millones cada mes durante 9 meses. Es la opción que más te conviene.`;
+      }
+      case '6cuotas': {
+        const cuotaMensual = (precioTotal - primeraCuota) / 6;
+        return `Con 6 cuotas recibes ${formatPrice(precioTotal)} millones en total. La primera cuota será de ${formatPrice(primeraCuota)} millones, y luego ${formatPrice(cuotaMensual)} millones mensuales durante 6 meses. Un buen equilibrio entre precio y tiempo.`;
+      }
+      case '3cuotas': {
+        const cuotaMensual = (precioTotal - primeraCuota) / 3;
+        return `Con 3 cuotas recibes ${formatPrice(precioTotal)} millones. Primero ${formatPrice(primeraCuota)} millones, y luego ${formatPrice(cuotaMensual)} millones cada mes por 3 meses. Pagos más rápidos pero un precio menor.`;
+      }
+      case 'contado':
+        return `Con pago inmediato recibes ${formatPrice(precioTotal)} millones de una sola vez. Es la opción más rápida, aunque con un precio base. Si prefieres más dinero, considera las cuotas.`;
+      default:
+        return '';
+    }
+  };
+
   // Efecto para mensajes basados en configuración
   useEffect(() => {
     if (!configuration) return;
@@ -106,6 +135,19 @@ export default function VoiceAgent({ currentSection, configuration, price }: Voi
       speak(messages.remodelacion_cliente, 'remodelacion_cliente');
     }
   }, [configuration]);
+
+  // Efecto para detectar cambios en forma de pago
+  useEffect(() => {
+    if (!configuration?.formaPago || !price || !isEnabled) return;
+    
+    const key = `pago_${configuration.formaPago}`;
+    if (hasSpoken.has(key)) return;
+
+    const message = getPaymentMessage(configuration.formaPago, price);
+    if (message) {
+      speak(message, key);
+    }
+  }, [configuration?.formaPago, price, isEnabled]);
 
   return (
     <>
