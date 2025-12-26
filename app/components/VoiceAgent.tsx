@@ -12,6 +12,9 @@ export default function VoiceAgent({ currentSection, configuration, price }: Voi
   const [isEnabled, setIsEnabled] = useState(false);
   const [isSpeaking, setIsSpeaking] = useState(false);
   const [hasSpoken, setHasSpoken] = useState<Set<string>>(new Set());
+  const [testText, setTestText] = useState(
+    '1500 es media hora como maximo tu pones el lugar juanjo'
+  );
   const audioRef = useRef<HTMLAudioElement | null>(null);
 
   // Mensajes del agente según la sección
@@ -42,6 +45,12 @@ export default function VoiceAgent({ currentSection, configuration, price }: Voi
     try {
       setIsSpeaking(true);
 
+      // Si ya había audio sonando, córtalo para que el nuevo empiece inmediato.
+      if (audioRef.current) {
+        audioRef.current.pause();
+        audioRef.current.currentTime = 0;
+      }
+
       // Llamada a la API de ElevenLabs
       const response = await fetch('/api/elevenlabs', {
         method: 'POST',
@@ -64,6 +73,14 @@ export default function VoiceAgent({ currentSection, configuration, price }: Voi
     } finally {
       setIsSpeaking(false);
     }
+  };
+
+  const playTest = async () => {
+    if (!isEnabled) return;
+    const text = testText.trim();
+    if (!text) return;
+    // No marcamos como "hasSpoken" para que puedas repetir la prueba cuantas veces quieras.
+    await speak(text, `test-${Date.now()}`);
   };
 
   // Efecto para detectar cambios de sección
@@ -101,56 +118,77 @@ export default function VoiceAgent({ currentSection, configuration, price }: Voi
 
       {/* Botón de control del agente */}
       <div className="fixed bottom-6 left-6 z-50">
-        <button
-          onClick={() => setIsEnabled(!isEnabled)}
-          className={`relative flex items-center justify-center w-16 h-16 rounded-full shadow-2xl transition-all ${
-            isEnabled 
-              ? 'bg-purple-600 hover:bg-purple-700' 
-              : 'bg-gray-400 hover:bg-gray-500'
-          }`}
-          title={isEnabled ? 'Desactivar asistente de voz' : 'Activar asistente de voz'}
-        >
-          {/* Ícono de micrófono */}
-          <svg 
-            className="w-7 h-7 text-white" 
-            fill="none" 
-            stroke="currentColor" 
-            viewBox="0 0 24 24"
+        <div className="flex items-end gap-3">
+          <button
+            onClick={() => setIsEnabled(!isEnabled)}
+            className={`relative flex items-center justify-center w-16 h-16 rounded-full shadow-2xl transition-all ${
+              isEnabled
+                ? 'bg-purple-600 hover:bg-purple-700'
+                : 'bg-gray-400 hover:bg-gray-500'
+            }`}
+            title={isEnabled ? 'Desactivar asistente de voz' : 'Activar asistente de voz'}
           >
-            {isEnabled ? (
-              <path 
-                strokeLinecap="round" 
-                strokeLinejoin="round" 
-                strokeWidth={2} 
-                d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" 
-              />
-            ) : (
-              <path 
-                strokeLinecap="round" 
-                strokeLinejoin="round" 
-                strokeWidth={2} 
-                d="M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z M17 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2" 
-              />
+            {/* Ícono de micrófono */}
+            <svg
+              className="w-7 h-7 text-white"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              {isEnabled ? (
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z"
+                />
+              ) : (
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z M17 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2"
+                />
+              )}
+            </svg>
+
+            {/* Animación de ondas cuando está hablando */}
+            {isSpeaking && isEnabled && (
+              <>
+                <span className="absolute inline-flex h-full w-full rounded-full bg-purple-400 opacity-75 animate-ping"></span>
+                <span className="absolute inline-flex h-full w-full rounded-full bg-purple-400 opacity-50 animate-pulse"></span>
+              </>
             )}
-          </svg>
+          </button>
 
-          {/* Animación de ondas cuando está hablando */}
-          {isSpeaking && isEnabled && (
-            <>
-              <span className="absolute inline-flex h-full w-full rounded-full bg-purple-400 opacity-75 animate-ping"></span>
-              <span className="absolute inline-flex h-full w-full rounded-full bg-purple-400 opacity-50 animate-pulse"></span>
-            </>
+          {/* Panel compacto: estado + prueba */}
+          {isEnabled && (
+            <div className="w-[280px] rounded-2xl border border-purple-100 bg-white/90 backdrop-blur px-3 py-3 shadow-xl">
+              <div className="flex items-center justify-between gap-3">
+                <p className="text-xs font-medium text-gray-900">
+                  {isSpeaking ? 'Hablando...' : 'Asistente activo'}
+                </p>
+                <button
+                  type="button"
+                  onClick={playTest}
+                  disabled={isSpeaking}
+                  className="rounded-full bg-purple-600 px-3 py-1.5 text-xs font-semibold text-white shadow-sm transition-colors hover:bg-purple-700 disabled:cursor-not-allowed disabled:opacity-60"
+                >
+                  Probar voz
+                </button>
+              </div>
+
+              <div className="mt-2">
+                <input
+                  value={testText}
+                  onChange={(e) => setTestText(e.target.value)}
+                  className="w-full rounded-xl border border-gray-200 bg-white px-3 py-2 text-xs text-gray-900 outline-none ring-0 focus:border-purple-300"
+                  placeholder="Texto de prueba"
+                />
+              </div>
+            </div>
           )}
-        </button>
-
-        {/* Label */}
-        {isEnabled && (
-          <div className="absolute left-20 top-1/2 -translate-y-1/2 bg-white px-3 py-2 rounded-lg shadow-lg whitespace-nowrap">
-            <p className="text-xs font-medium text-gray-900">
-              {isSpeaking ? 'Hablando...' : 'Asistente activo'}
-            </p>
-          </div>
-        )}
+        </div>
       </div>
     </>
   );
