@@ -5,6 +5,7 @@ import HabiHero from './habi/components/HabiHero';
 import VisualLeft from './habi/components/VisualLeft';
 import ConfiguratorRight from './habi/components/ConfiguratorRight';
 import StickyPrice from './habi/components/StickyPrice';
+import VoiceAgent from './components/VoiceAgent';
 import { HabiConfiguration, PAYMENT_OPTIONS, COSTOS_PERCENTAGES } from './types/habi';
 
 // Datos de ejemplo - En producción vendrán de HubSpot
@@ -18,6 +19,7 @@ const PROPERTY_DATA = {
 export default function Home() {
   const [showHero, setShowHero] = useState(true);
   const [showStickyPrice, setShowStickyPrice] = useState(true);
+  const [currentSection, setCurrentSection] = useState<string>('hero');
   // DEFAULT: precio máximo (9 cuotas, cliente asume remodelación y trámites)
   const [configuration, setConfiguration] = useState<HabiConfiguration>({
     tramites: 'cliente',
@@ -59,6 +61,7 @@ export default function Home() {
 
   const handleStartConfiguration = () => {
     setShowHero(false);
+    setCurrentSection('inicio');
     setTimeout(() => {
       configuratorRef.current?.scrollIntoView({ behavior: 'smooth' });
     }, 100);
@@ -99,6 +102,12 @@ export default function Home() {
 
   return (
     <main className="min-h-screen bg-white">
+      {/* Agente de Voz */}
+      <VoiceAgent 
+        currentSection={currentSection}
+        configuration={configuration}
+        price={currentPrice}
+      />
       {showHero && (
         <HabiHero 
           maxPrice={maxPrice}
