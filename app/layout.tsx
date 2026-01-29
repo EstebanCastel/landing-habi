@@ -2,8 +2,8 @@ import type { Metadata } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "Model Y | Tesla",
-  description: "Configura tu Tesla Model Y. Diseño aerodinámico, gran autonomía y rendimiento excepcional.",
+  title: "Habi | Vende tu inmueble",
+  description: "Vende tu inmueble de forma rápida y segura con Habi. Te compramos directamente o te ayudamos a vender.",
 };
 
 export default function RootLayout({
