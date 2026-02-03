@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useRef, ReactNode, RefObject } from 'react';
+import { useState, useEffect, ReactNode, RefObject } from 'react';
 
 interface ModalProps {
   isOpen: boolean;
@@ -13,28 +13,21 @@ interface ModalProps {
 export default function Modal({ isOpen, onClose, children, title, contentRef }: ModalProps) {
   const [isClosing, setIsClosing] = useState(false);
   const [shouldRender, setShouldRender] = useState(isOpen);
-  const prevIsOpenRef = useRef(isOpen);
 
   // Manejar apertura/cierre basado en cambios de isOpen
-  if (isOpen !== prevIsOpenRef.current) {
-    prevIsOpenRef.current = isOpen;
+  useEffect(() => {
     if (isOpen) {
       setShouldRender(true);
       setIsClosing(false);
-    } else if (shouldRender) {
-      setIsClosing(true);
-    }
-  }
-
-  // Manejar overflow del body y timeout de cierre
-  useEffect(() => {
-    if (isOpen) {
       document.body.style.overflow = 'hidden';
+    } else if (shouldRender && !isClosing) {
+      setIsClosing(true);
     }
     
     return () => {
       document.body.style.overflow = 'unset';
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isOpen]);
 
   // Manejar la animación de cierre
