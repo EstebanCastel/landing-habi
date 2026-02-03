@@ -253,7 +253,7 @@ const MODAL_CONTENT = {
         title: 'Letrero de "Se Vende"',
         description: 'Recibe un letrero profesional para colocar en tu ventana y atraer compradores de tu zona.',
         mediaPlaceholder: 'letrero',
-        image: '/Ultrarealistic_lifestyle_editorial_202602031 (5).jpeg'
+        image: '/Image_202602031441.jpeg'
       }
     ]
   }
