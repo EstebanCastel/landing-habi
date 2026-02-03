@@ -88,10 +88,10 @@ export default function Home() {
   // Estado para carrusel de videos en móvil
   const [currentVideoIndex, setCurrentVideoIndex] = useState(0);
   const DONATION_VIDEOS = [
-    '/DJI_20251210101636_0086_D.MP4',
-    '/DJI_20251210171250_0012_D.MP4',
-    '/DJI_20251210221910_0517_D.MP4',
-    '/DJI_20251210222059_0518_D.MP4'
+    '/DJI_20251210101636_0086_D.webm',
+    '/DJI_20251210171250_0012_D.webm',
+    '/DJI_20251210221910_0517_D.webm',
+    '/DJI_20251210222059_0518_D.webm'
   ];
 
   // Ref para el panel derecho en desktop
