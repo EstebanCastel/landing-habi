@@ -129,7 +129,7 @@ export default function ComparablesMap({
   const mapRef = useRef<HTMLDivElement>(null);
   const mapInstanceRef = useRef<L.Map | null>(null);
   const markersRef = useRef<Map<string, L.Marker>>(new Map());
-  const [showPopup, setShowPopup] = useState(false);
+  const prevSelectedRef = useRef<string | null>(null);
 
   const formatPrice = (price: number) => {
     return `$${Math.round(price).toLocaleString('es-CO')}`;
@@ -224,9 +224,9 @@ export default function ComparablesMap({
         17,
         { animate: true }
       );
-      setShowPopup(true);
+      prevSelectedRef.current = selectedComparable.nid;
     } else {
-      setShowPopup(false);
+      prevSelectedRef.current = null;
     }
   }, [selectedComparable, comparables]);
 
@@ -235,7 +235,7 @@ export default function ComparablesMap({
       <div ref={mapRef} className="w-full h-full" />
       
       {/* Popup de información del comparable */}
-      {selectedComparable && showPopup && (
+      {selectedComparable && (
         <>
           {/* Overlay para cerrar en móvil */}
           <div 

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, ReactNode, RefObject } from 'react';
+import { useState, useEffect, useRef, ReactNode, RefObject } from 'react';
 
 interface ModalProps {
   isOpen: boolean;
@@ -12,17 +12,34 @@ interface ModalProps {
 
 export default function Modal({ isOpen, onClose, children, title, contentRef }: ModalProps) {
   const [isClosing, setIsClosing] = useState(false);
-  const [shouldRender, setShouldRender] = useState(false);
+  const [shouldRender, setShouldRender] = useState(isOpen);
+  const prevIsOpenRef = useRef(isOpen);
 
-  useEffect(() => {
+  // Manejar apertura/cierre basado en cambios de isOpen
+  if (isOpen !== prevIsOpenRef.current) {
+    prevIsOpenRef.current = isOpen;
     if (isOpen) {
       setShouldRender(true);
       setIsClosing(false);
-      // Prevenir scroll del body cuando el modal está abierto
-      document.body.style.overflow = 'hidden';
     } else if (shouldRender) {
-      // Si el modal está renderizado y isOpen cambia a false, cerrar con animación
       setIsClosing(true);
+    }
+  }
+
+  // Manejar overflow del body y timeout de cierre
+  useEffect(() => {
+    if (isOpen) {
+      document.body.style.overflow = 'hidden';
+    }
+    
+    return () => {
+      document.body.style.overflow = 'unset';
+    };
+  }, [isOpen]);
+
+  // Manejar la animación de cierre
+  useEffect(() => {
+    if (isClosing) {
       const timer = setTimeout(() => {
         setShouldRender(false);
         setIsClosing(false);
@@ -30,18 +47,12 @@ export default function Modal({ isOpen, onClose, children, title, contentRef }: 
       }, 300);
       return () => clearTimeout(timer);
     }
-
-    return () => {
-      document.body.style.overflow = 'unset';
-    };
-  }, [isOpen, shouldRender]);
+  }, [isClosing]);
 
   const handleClose = () => {
     setIsClosing(true);
     setTimeout(() => {
       onClose();
-      setIsClosing(false);
-      setShouldRender(false);
     }, 300);
   };
 

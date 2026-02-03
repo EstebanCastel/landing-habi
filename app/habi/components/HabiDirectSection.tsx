@@ -2,7 +2,6 @@
 
 import { useState } from 'react';
 import { HabiConfiguration, COSTOS_PERCENTAGES, PAYMENT_OPTIONS } from '../../types/habi';
-import AnimatedPrice from './AnimatedPrice';
 import DonationSection from './DonationSection';
 import PersonalAdvisor from './PersonalAdvisor';
 import Modal from './Modal';

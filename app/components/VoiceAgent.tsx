@@ -4,7 +4,11 @@ import { useState, useEffect, useRef } from 'react';
 
 interface VoiceAgentProps {
   currentSection?: string;
-  configuration?: any;
+  configuration?: {
+    tramites?: string;
+    remodelacion?: string;
+    formaPago?: string;
+  };
   price?: number;
 }
 
