@@ -1,6 +1,7 @@
 'use client';
 
 import DonationSection from './DonationSection';
+import PersonalAdvisor from './PersonalAdvisor';
 
 interface InmobiliariaSectionProps {
   precioInmobiliaria: number;
@@ -9,6 +10,7 @@ interface InmobiliariaSectionProps {
   selectedDonation: string;
   donationAmount: number;
   onDonationChange: (optionId: string, amount: number) => void;
+  onDonationRef?: (ref: HTMLDivElement | null) => void;
 }
 
 export default function InmobiliariaSection({
@@ -17,7 +19,8 @@ export default function InmobiliariaSection({
   valorMercado,
   selectedDonation,
   donationAmount,
-  onDonationChange
+  onDonationChange,
+  onDonationRef
 }: InmobiliariaSectionProps) {
   // Precio neto después de comisión y donación
   const precioNeto = precioInmobiliaria * 0.95;
@@ -27,7 +30,7 @@ export default function InmobiliariaSection({
   };
 
   return (
-    <div className="px-6 py-8 bg-white">
+    <div id="configurator-section" className="px-6 py-8 bg-white">
       <div className="text-center mb-6">
         <div className="w-16 h-16 bg-purple-100 rounded-full flex items-center justify-center mx-auto mb-4">
           <svg className="w-8 h-8 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -113,11 +116,18 @@ export default function InmobiliariaSection({
         </div>
       </div>
 
+      {/* Asesor Personal */}
+      <div className="-mx-6">
+        <PersonalAdvisor />
+      </div>
+
       {/* Donación */}
       <div className="-mx-6">
         <DonationSection 
           selectedDonation={selectedDonation}
+          donationAmount={donationAmount}
           onDonationChange={onDonationChange}
+          onSectionRef={onDonationRef}
         />
       </div>
 

@@ -50,3 +50,8 @@ body {
 .animate-modal-enter {
   animation: modal-enter 0.3s ease-out forwards;
 }
+
+/* Ocultar barra de scroll */
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
+}

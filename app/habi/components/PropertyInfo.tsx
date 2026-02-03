@@ -1,5 +1,7 @@
 'use client';
 
+import { useEffect, useRef } from 'react';
+
 interface PropertyInfoProps {
   propertyData: {
     direccion: string;
@@ -9,11 +11,21 @@ interface PropertyInfoProps {
     habitaciones: number;
     banos: number;
   };
+  onSectionRef?: (ref: HTMLDivElement | null) => void;
 }
 
-export default function PropertyInfo({ propertyData }: PropertyInfoProps) {
+export default function PropertyInfo({ propertyData, onSectionRef }: PropertyInfoProps) {
+  const sectionRef = useRef<HTMLDivElement>(null);
+
+  // Reportar la ref al padre
+  useEffect(() => {
+    if (onSectionRef) {
+      onSectionRef(sectionRef.current);
+    }
+  }, [onSectionRef]);
+
   return (
-    <div className="p-6 bg-gradient-to-br from-purple-50 via-white to-white">
+    <div ref={sectionRef} id="property-info-section" className="p-6 bg-gradient-to-br from-purple-50 via-white to-white">
       <div className="mb-4">
         <p className="text-sm text-purple-600 uppercase tracking-wider font-semibold mb-1">
           Tu inmueble

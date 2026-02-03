@@ -56,7 +56,7 @@ export default function StickyPrice({
 
   return (
     <div
-      className={`fixed bottom-0 left-0 right-0 md:bottom-0 md:right-0 md:left-auto w-full md:w-[480px] bg-white p-4 transition-all duration-500 ease-in-out ${
+      className={`fixed bottom-0 left-0 right-0 md:bottom-0 md:right-0 md:left-auto w-full md:w-[460px] bg-white p-4 transition-all duration-500 ease-in-out ${
         show 
           ? 'translate-y-0 opacity-100' 
           : 'translate-y-full opacity-0 pointer-events-none'

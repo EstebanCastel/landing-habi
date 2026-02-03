@@ -2,10 +2,12 @@
 
 import { useState, useEffect, useRef, useCallback } from 'react';
 import dynamic from 'next/dynamic';
+import Image from 'next/image';
 import AnnouncementBar from './habi/components/AnnouncementBar';
 import Navbar from './habi/components/Navbar';
 import ConfiguratorRight from './habi/components/ConfiguratorRight';
 import StickyPrice from './habi/components/StickyPrice';
+import AIAssistant from './habi/components/AIAssistant';
 import { HabiConfiguration, PAYMENT_OPTIONS, COSTOS_PERCENTAGES } from './types/habi';
 
 // Importar el mapa dinámicamente para evitar SSR issues con Leaflet
@@ -59,7 +61,8 @@ interface InmuebleData {
 
 export default function Home() {
   const [showStickyPrice, setShowStickyPrice] = useState(true);
-  const [showMap, setShowMap] = useState(false);
+  // Sección activa: 'property' (imagen), 'comparables' (mapa), 'configurator' (imagen config), 'payment' (imagen cuotas), 'donation' (videos), 'other' (fondo neutro)
+  const [activeSection, setActiveSection] = useState<'property' | 'comparables' | 'configurator' | 'payment' | 'donation' | 'other'>('property');
   
   // Datos del mapa
   const [inmueble, setInmueble] = useState<InmuebleData | null>(null);
@@ -81,6 +84,15 @@ export default function Home() {
   // Estado de donación
   const [selectedDonation, setSelectedDonation] = useState('');
   const [donationAmount, setDonationAmount] = useState(0);
+
+  // Estado para carrusel de videos en móvil
+  const [currentVideoIndex, setCurrentVideoIndex] = useState(0);
+  const DONATION_VIDEOS = [
+    '/DJI_20251210101636_0086_D.MP4',
+    '/DJI_20251210171250_0012_D.MP4',
+    '/DJI_20251210221910_0517_D.MP4',
+    '/DJI_20251210222059_0518_D.MP4'
+  ];
 
   // Ref para el panel derecho en desktop
   const rightColumnRef = useRef<HTMLDivElement | null>(null);
@@ -173,10 +185,100 @@ export default function Home() {
     return Math.round(precioBase);
   };
 
-  // Callback para cuando la sección de comparables cambia visibilidad
-  const handleComparablesVisibility = useCallback((isVisible: boolean) => {
-    setShowMap(isVisible);
+  // Función para determinar qué sección está más visible
+  const updateActiveSection = useCallback(() => {
+    // Detectar si estamos en desktop
+    const isDesktop = window.innerWidth >= 768;
+    
+    // En móvil, el panel superior está en top: 90px + 200px de altura = 290px
+    // El checkpoint debe estar justo debajo del panel
+    const checkPoint = isDesktop ? 200 : 300;
+
+    // Buscar el contenedor correcto según el viewport
+    // En móvil: buscar elementos visibles (no ocultos por md:hidden)
+    // En desktop: buscar dentro del panel derecho scrolleable
+    const allPropertyEls = document.querySelectorAll('#property-info-section');
+    const allComparablesEls = document.querySelectorAll('#comparables-section');
+    const allSaleModalityEls = document.querySelectorAll('#sale-modality-section');
+    const allConfiguratorEls = document.querySelectorAll('#configurator-section');
+    const allPaymentEls = document.querySelectorAll('#forma-pago-section');
+    const allDonationEls = document.querySelectorAll('#donation-section');
+
+    // Función para obtener el elemento visible (el que tiene offsetParent no null)
+    const getVisibleElement = (elements: NodeListOf<Element>): Element | null => {
+      for (const el of elements) {
+        const htmlEl = el as HTMLElement;
+        // Un elemento está visible si tiene dimensiones y no está oculto
+        if (htmlEl.offsetWidth > 0 && htmlEl.offsetHeight > 0) {
+          return el;
+        }
+      }
+      return null;
+    };
+
+    const propertyEl = getVisibleElement(allPropertyEls);
+    const comparablesEl = getVisibleElement(allComparablesEls);
+    const saleModalityEl = getVisibleElement(allSaleModalityEls);
+    const configuratorEl = getVisibleElement(allConfiguratorEls);
+    const paymentEl = getVisibleElement(allPaymentEls);
+    const donationEl = getVisibleElement(allDonationEls);
+
+    // Obtener las posiciones de cada sección
+    const propertyRect = propertyEl?.getBoundingClientRect();
+    const comparablesRect = comparablesEl?.getBoundingClientRect();
+    const saleModalityRect = saleModalityEl?.getBoundingClientRect();
+    const configuratorRect = configuratorEl?.getBoundingClientRect();
+    const paymentRect = paymentEl?.getBoundingClientRect();
+    const donationRect = donationEl?.getBoundingClientRect();
+
+    const viewportHeight = window.innerHeight;
+    // Donation se activa cuando está al 50% del viewport desde arriba
+    const donationCheckPoint = viewportHeight * 0.5;
+
+    // Primero verificar donation (tiene prioridad si está visible)
+    if (donationRect && donationRect.height > 0 && donationRect.top <= donationCheckPoint) {
+      setActiveSection('donation');
+      return;
+    }
+
+    // Crear un array ordenado de secciones con sus posiciones
+    const sections: { id: 'property' | 'comparables' | 'configurator' | 'payment' | 'other', top: number }[] = [];
+    
+    if (propertyRect) sections.push({ id: 'property', top: propertyRect.top });
+    if (comparablesRect) sections.push({ id: 'comparables', top: comparablesRect.top });
+    // Sale-modality (tabs) - fondo neutro
+    if (saleModalityRect) {
+      sections.push({ id: 'other', top: saleModalityRect.top });
+    }
+    // Sección de configuración (Así se construye tu oferta) - imagen
+    if (configuratorRect) {
+      sections.push({ id: 'configurator', top: configuratorRect.top });
+    }
+    // Sección de forma de pago
+    if (paymentRect) {
+      sections.push({ id: 'payment', top: paymentRect.top });
+    }
+
+    // Ordenar por top (de menor a mayor = de arriba a abajo en el DOM)
+    sections.sort((a, b) => a.top - b.top);
+
+    // La sección activa es la última que tiene su TOP por encima del checkpoint
+    let activeId: 'property' | 'comparables' | 'configurator' | 'payment' | 'other' = 'property';
+    
+    for (const section of sections) {
+      if (section.top <= checkPoint) {
+        activeId = section.id;
+      }
+    }
+    
+    setActiveSection(activeId);
   }, []);
+
+  // Callbacks vacíos para props de ConfiguratorRight (las secciones usan IDs)
+  const handleRefCallback = useCallback(() => {}, []);
+
+  // Ref para almacenar el listener del panel derecho
+  const rightPanelScrollListenerRef = useRef<(() => void) | null>(null);
 
   // Función para manejar el scroll del StickyPrice
   const handleStickyScroll = useCallback(() => {
@@ -212,32 +314,48 @@ export default function Home() {
 
   // Callback ref para el panel derecho - se ejecuta cuando el elemento está en el DOM
   const setRightColumnRef = useCallback((node: HTMLDivElement | null) => {
-    // Limpiar listener anterior si existe
-    if (scrollListenerRef.current && rightColumnRef.current) {
-      rightColumnRef.current.removeEventListener('scroll', scrollListenerRef.current);
+    // Limpiar listeners anteriores si existen
+    if (rightColumnRef.current) {
+      if (scrollListenerRef.current) {
+        rightColumnRef.current.removeEventListener('scroll', scrollListenerRef.current);
+      }
+      if (rightPanelScrollListenerRef.current) {
+        rightColumnRef.current.removeEventListener('scroll', rightPanelScrollListenerRef.current);
+      }
     }
 
     rightColumnRef.current = node;
 
-    // Si hay un nuevo nodo, agregar el listener
+    // Si hay un nuevo nodo, agregar los listeners
     if (node) {
+      // Listener para StickyPrice
       scrollListenerRef.current = handleStickyScroll;
       node.addEventListener('scroll', handleStickyScroll, { passive: true });
-      // Ejecutar inmediatamente para establecer estado inicial
+      
+      // Listener para detección de sección activa
+      rightPanelScrollListenerRef.current = updateActiveSection;
+      node.addEventListener('scroll', updateActiveSection, { passive: true });
+      
+      // Ejecutar inmediatamente para establecer estados iniciales
       handleStickyScroll();
+      updateActiveSection();
     }
-  }, [handleStickyScroll]);
+  }, [handleStickyScroll, updateActiveSection]);
 
   // También escuchar scroll del window (para móvil) y resize
   useEffect(() => {
     window.addEventListener('scroll', handleStickyScroll, { passive: true });
+    window.addEventListener('scroll', updateActiveSection, { passive: true });
     window.addEventListener('resize', handleStickyScroll, { passive: true });
+    window.addEventListener('resize', updateActiveSection, { passive: true });
     
     return () => {
       window.removeEventListener('scroll', handleStickyScroll);
+      window.removeEventListener('scroll', updateActiveSection);
       window.removeEventListener('resize', handleStickyScroll);
+      window.removeEventListener('resize', updateActiveSection);
     };
-  }, [handleStickyScroll]);
+  }, [handleStickyScroll, updateActiveSection]);
 
   const currentPrice = calculatePrice();
 
@@ -262,12 +380,58 @@ export default function Home() {
             height: '200px'
           }}
         >
-          {/* Fondo blanco por defecto */}
-          <div className="absolute inset-0 bg-gradient-to-br from-gray-50 to-white" />
-          
-          {/* Mapa cuando está en la sección de comparables */}
+          {/* Fondo neutro por defecto */}
+          <div className="absolute inset-0 bg-gradient-to-br from-purple-50 to-white" />
+
+          {/* Fondo neutro - sección 'other' (tabs de modalidad) */}
+          {/* Ya está cubierto por el fondo neutro por defecto */}
+
+          {/* Imagen de configuración - sección 'configurator' */}
           <div 
-            className={`absolute inset-0 transition-opacity duration-500 ${showMap ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}
+            className={`absolute inset-0 transition-opacity duration-500 ${activeSection === 'configurator' ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}
+          >
+            <Image
+              src="/Image_202602031055.jpeg"
+              alt="Configuración de tu oferta"
+              fill
+              className="object-cover"
+              style={{ objectPosition: 'center 30%' }}
+            />
+            <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent" />
+          </div>
+
+          {/* Imagen de forma de pago - sección 'payment' */}
+          <div 
+            className={`absolute inset-0 transition-opacity duration-500 ${activeSection === 'payment' ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}
+          >
+            <Image
+              src="/Ultrarealistic_lifestyle_editorial_202602031 (3).jpeg"
+              alt="Forma de pago"
+              fill
+              className="object-cover"
+              style={{ objectPosition: 'center 40%' }}
+            />
+            <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent" />
+          </div>
+          
+          {/* Imagen del inmueble - sección 'property' */}
+          <div 
+            className={`absolute inset-0 transition-opacity duration-500 ${activeSection === 'property' ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}
+          >
+            <Image
+              src="/Ultrarealistic_lifestyle_editorial_202602021 (8).jpeg"
+              alt="Tu inmueble"
+              fill
+              className="object-cover"
+              style={{ objectPosition: 'center 40%' }}
+              priority
+            />
+            <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent" />
+          </div>
+          
+          {/* Mapa - sección 'comparables' */}
+          <div 
+            className={`absolute inset-0 transition-opacity duration-500 ${activeSection === 'comparables' ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}
           >
             {inmueble && comparables.length > 0 && (
               <ComparablesMap
@@ -283,12 +447,53 @@ export default function Home() {
               />
             )}
           </div>
-          
-          {/* Contenido por defecto cuando no hay mapa */}
+
+          {/* Carrusel de videos - sección 'donation' (móvil) */}
           <div 
-            className={`absolute inset-0 flex items-center justify-center transition-opacity duration-500 ${showMap ? 'opacity-0 pointer-events-none' : 'opacity-100'}`}
+            className={`absolute inset-0 transition-opacity duration-500 ${activeSection === 'donation' ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}
           >
-            {/* Espacio en blanco o contenido personalizado */}
+            <div className="relative h-full">
+              <video 
+                key={currentVideoIndex}
+                src={DONATION_VIDEOS[currentVideoIndex]}
+                autoPlay
+                loop
+                muted
+                playsInline
+                className="w-full h-full object-cover"
+              />
+              
+              {/* Flechas de navegación */}
+              <button 
+                onClick={() => setCurrentVideoIndex((prev) => (prev === 0 ? DONATION_VIDEOS.length - 1 : prev - 1))}
+                className="absolute left-2 top-1/2 -translate-y-1/2 w-8 h-8 bg-black/40 hover:bg-black/60 rounded-full flex items-center justify-center text-white transition-colors"
+              >
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+                </svg>
+              </button>
+              <button 
+                onClick={() => setCurrentVideoIndex((prev) => (prev === DONATION_VIDEOS.length - 1 ? 0 : prev + 1))}
+                className="absolute right-2 top-1/2 -translate-y-1/2 w-8 h-8 bg-black/40 hover:bg-black/60 rounded-full flex items-center justify-center text-white transition-colors"
+              >
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                </svg>
+              </button>
+
+              {/* Indicadores de posición */}
+              <div className="absolute bottom-2 left-1/2 -translate-x-1/2 flex gap-1.5">
+                {DONATION_VIDEOS.map((_, idx) => (
+                  <button
+                    key={idx}
+                    onClick={() => setCurrentVideoIndex(idx)}
+                    className={`w-2 h-2 rounded-full transition-colors ${
+                      idx === currentVideoIndex ? 'bg-white' : 'bg-white/40'
+                    }`}
+                  />
+                ))}
+              </div>
+            </div>
           </div>
         </div>
 
@@ -316,7 +521,10 @@ export default function Home() {
             selectedDonation={selectedDonation}
             donationAmount={donationAmount}
             onDonationChange={handleDonationChange}
-            onComparablesVisibility={handleComparablesVisibility}
+            onPropertyRef={handleRefCallback}
+            onComparablesRef={handleRefCallback}
+            onSaleModalityRef={handleRefCallback}
+            onDonationRef={handleRefCallback}
             comparables={comparables}
             selectedComparable={selectedComparable}
             onSelectComparable={setSelectedComparable}
@@ -326,13 +534,61 @@ export default function Home() {
 
       {/* === LAYOUT DESKTOP === */}
       <div className="hidden md:flex flex-row flex-1">
-        {/* Panel izquierdo - Mapa fixed */}
+        {/* Panel izquierdo - Imagen/Mapa fixed */}
         <div className="flex-1 relative">
+          {/* Fondo neutro (para sección 'other' - tabs de modalidad) */}
+          <div 
+            className={`
+              fixed left-0 top-[90px] bottom-0 right-[480px] z-10
+              bg-gradient-to-br from-purple-50 to-white
+              transition-opacity duration-500
+              ${activeSection === 'other' ? 'opacity-100' : 'opacity-0 pointer-events-none'}
+            `}
+          />
+
+          {/* Imagen de configuración - sección 'configurator' */}
           <div 
             className={`
               fixed left-0 top-[90px] bottom-0 right-[480px] z-10
               transition-opacity duration-500
-              ${showMap ? 'opacity-100' : 'opacity-0 pointer-events-none'}
+              ${activeSection === 'configurator' ? 'opacity-100' : 'opacity-0 pointer-events-none'}
+            `}
+          >
+            <Image
+              src="/Image_202602031055.jpeg"
+              alt="Configuración de tu oferta"
+              fill
+              className="object-cover"
+              style={{ objectPosition: 'center 30%' }}
+            />
+            <div className="absolute inset-0 bg-gradient-to-r from-black/20 to-transparent" />
+          </div>
+          
+          {/* Imagen del inmueble - sección 'property' */}
+          <div 
+            className={`
+              fixed left-0 top-[90px] bottom-0 right-[480px] z-10
+              transition-opacity duration-500
+              ${activeSection === 'property' ? 'opacity-100' : 'opacity-0 pointer-events-none'}
+            `}
+          >
+            <Image
+              src="/Ultrarealistic_lifestyle_editorial_202602021 (8).jpeg"
+              alt="Tu inmueble"
+              fill
+              className="object-cover"
+              style={{ objectPosition: 'center 40%' }}
+              priority
+            />
+            <div className="absolute inset-0 bg-gradient-to-r from-black/20 to-transparent" />
+          </div>
+          
+          {/* Mapa - sección 'comparables' */}
+          <div 
+            className={`
+              fixed left-0 top-[90px] bottom-0 right-[480px] z-10
+              transition-opacity duration-500
+              ${activeSection === 'comparables' ? 'opacity-100' : 'opacity-0 pointer-events-none'}
             `}
           >
             {inmueble && comparables.length > 0 && (
@@ -348,6 +604,47 @@ export default function Home() {
                 onSelectComparable={setSelectedComparable}
               />
             )}
+          </div>
+
+          {/* Imagen forma de pago - sección 'payment' */}
+          <div 
+            className={`
+              fixed left-0 top-[90px] bottom-0 right-[480px] z-10
+              transition-opacity duration-500
+              ${activeSection === 'payment' ? 'opacity-100' : 'opacity-0 pointer-events-none'}
+            `}
+          >
+            <Image
+              src="/Ultrarealistic_lifestyle_editorial_202602031 (3).jpeg"
+              alt="Forma de pago"
+              fill
+              className="object-cover"
+              style={{ objectPosition: 'center 40%' }}
+            />
+            <div className="absolute inset-0 bg-gradient-to-r from-black/20 to-transparent" />
+          </div>
+
+          {/* Grid de videos - sección 'donation' (desktop) */}
+          <div 
+            className={`
+              fixed left-0 top-[90px] bottom-0 right-[480px] z-10
+              transition-opacity duration-500
+              ${activeSection === 'donation' ? 'opacity-100' : 'opacity-0 pointer-events-none'}
+            `}
+          >
+            <div className="grid grid-cols-2 gap-1 h-full p-1">
+              {DONATION_VIDEOS.map((videoSrc, idx) => (
+                <video 
+                  key={idx}
+                  src={videoSrc}
+                  autoPlay
+                  loop
+                  muted
+                  playsInline
+                  className="w-full h-full object-cover rounded-lg"
+                />
+              ))}
+            </div>
           </div>
         </div>
         
@@ -378,7 +675,10 @@ export default function Home() {
             selectedDonation={selectedDonation}
             donationAmount={donationAmount}
             onDonationChange={handleDonationChange}
-            onComparablesVisibility={handleComparablesVisibility}
+            onPropertyRef={handleRefCallback}
+            onComparablesRef={handleRefCallback}
+            onSaleModalityRef={handleRefCallback}
+            onDonationRef={handleRefCallback}
             comparables={comparables}
             selectedComparable={selectedComparable}
             onSelectComparable={setSelectedComparable}
@@ -396,6 +696,9 @@ export default function Home() {
         donationAmount={donationAmount}
         onHabiClick={() => setModalidadVenta('habi')}
       />
+
+      {/* Asistente de IA flotante */}
+      <AIAssistant />
     </main>
   );
 }

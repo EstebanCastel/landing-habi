@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef, useCallback, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 
 interface Comparable {
   id: string;
@@ -23,7 +23,7 @@ interface Comparable {
 }
 
 interface ComparablesSectionProps {
-  onVisibilityChange?: (isVisible: boolean) => void;
+  onSectionRef?: (ref: HTMLDivElement | null) => void;
   comparables: Comparable[];
   selectedComparable: Comparable | null;
   onSelectComparable: (comparable: Comparable | null) => void;
@@ -33,111 +33,24 @@ interface ComparablesSectionProps {
 const ITEMS_PER_PAGE = 4;
 
 export default function ComparablesSection({ 
-  onVisibilityChange,
+  onSectionRef,
   comparables,
   selectedComparable,
   onSelectComparable,
   ofertaHabi = 0
 }: ComparablesSectionProps) {
   const sectionRef = useRef<HTMLDivElement>(null);
-  const lastVisibleRef = useRef<boolean>(false);
-  const hasScrolledRef = useRef<boolean>(false);
-  const onVisibilityChangeRef = useRef(onVisibilityChange);
-  const scrollContainerRef = useRef<HTMLElement | null>(null);
-  const scrollHandlerRef = useRef<(() => void) | null>(null);
   
   // Estado para paginación
   const [currentPage, setCurrentPage] = useState(0);
   const totalPages = Math.ceil(comparables.length / ITEMS_PER_PAGE);
 
-  // Mantener la referencia actualizada
+  // Reportar la ref al padre
   useEffect(() => {
-    onVisibilityChangeRef.current = onVisibilityChange;
-  }, [onVisibilityChange]);
-
-  // Función para verificar visibilidad
-  const checkVisibility = useCallback(() => {
-    if (!sectionRef.current || !onVisibilityChangeRef.current) return;
-    
-    if (!hasScrolledRef.current) {
-      return;
+    if (onSectionRef) {
+      onSectionRef(sectionRef.current);
     }
-
-    const section = sectionRef.current;
-    const sectionRect = section.getBoundingClientRect();
-    
-    const viewportHeight = window.innerHeight;
-    const viewportTop = 100;
-    const viewportBottom = viewportHeight;
-
-    const sectionTop = sectionRect.top;
-    const sectionBottom = sectionRect.bottom;
-    const sectionHeight = sectionRect.height;
-
-    const visibleTop = Math.max(sectionTop, viewportTop);
-    const visibleBottom = Math.min(sectionBottom, viewportBottom);
-    const visibleHeight = Math.max(0, visibleBottom - visibleTop);
-    const visiblePercentage = sectionHeight > 0 ? visibleHeight / sectionHeight : 0;
-
-    const isVisible = visiblePercentage >= 0.25;
-
-    if (lastVisibleRef.current !== isVisible) {
-      lastVisibleRef.current = isVisible;
-      onVisibilityChangeRef.current(isVisible);
-    }
-  }, []);
-
-  // Manejo del scroll
-  useEffect(() => {
-    if (!onVisibilityChangeRef.current) return;
-
-    onVisibilityChangeRef.current(false);
-    lastVisibleRef.current = false;
-    hasScrolledRef.current = false;
-
-    const handleScroll = () => {
-      hasScrolledRef.current = true;
-      requestAnimationFrame(checkVisibility);
-    };
-
-    scrollHandlerRef.current = handleScroll;
-
-    const setupListeners = () => {
-      if (sectionRef.current) {
-        let parent = sectionRef.current.parentElement;
-        while (parent) {
-          const style = window.getComputedStyle(parent);
-          if (style.overflowY === 'auto' || style.overflowY === 'scroll') {
-            scrollContainerRef.current = parent;
-            break;
-          }
-          parent = parent.parentElement;
-        }
-      }
-      
-      window.addEventListener('scroll', handleScroll, { passive: true });
-      
-      if (scrollContainerRef.current) {
-        scrollContainerRef.current.addEventListener('scroll', handleScroll, { passive: true });
-      }
-      
-      window.addEventListener('resize', checkVisibility, { passive: true });
-    };
-
-    const timeoutId = setTimeout(setupListeners, 100);
-
-    return () => {
-      clearTimeout(timeoutId);
-      window.removeEventListener('scroll', handleScroll);
-      if (scrollContainerRef.current) {
-        scrollContainerRef.current.removeEventListener('scroll', handleScroll);
-      }
-      window.removeEventListener('resize', checkVisibility);
-      if (onVisibilityChangeRef.current) {
-        onVisibilityChangeRef.current(false);
-      }
-    };
-  }, [checkVisibility]);
+  }, [onSectionRef]);
 
   // Calcular estadísticas
   const stats = {
@@ -195,7 +108,7 @@ export default function ComparablesSection({
   }
 
   return (
-    <div ref={sectionRef} id="comparables-section" className="p-6 bg-white border-b border-gray-200">
+    <div ref={sectionRef} id="comparables-section" className="p-6 bg-white">
       <div className="flex items-center gap-2 mb-2">
         <div className="w-8 h-8 bg-purple-100 rounded-full flex items-center justify-center">
           <svg className="w-4 h-4 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">

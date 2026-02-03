@@ -1,6 +1,7 @@
 'use client';
 
 import DonationSection from './DonationSection';
+import PersonalAdvisor from './PersonalAdvisor';
 
 type Modalidad = 'habi' | 'inmobiliaria' | 'cuenta_propia';
 
@@ -10,7 +11,9 @@ interface SellByYourselfSectionProps {
   valorMercado: number;
   setModalidadVenta: (modalidad: Modalidad) => void;
   selectedDonation: string;
+  donationAmount: number;
   onDonationChange: (optionId: string, amount: number) => void;
+  onDonationRef?: (ref: HTMLDivElement | null) => void;
 }
 
 export default function SellByYourselfSection({
@@ -19,18 +22,25 @@ export default function SellByYourselfSection({
   valorMercado,
   setModalidadVenta,
   selectedDonation,
-  onDonationChange
+  donationAmount,
+  onDonationChange,
+  onDonationRef
 }: SellByYourselfSectionProps) {
   const formatPrice = (price: number) => {
     return `$ ${price.toLocaleString('es-CO')}`;
   };
 
   return (
-    <div className="bg-white">
+    <div id="configurator-section" className="bg-white">
+      {/* Asesor Personal */}
+      <PersonalAdvisor />
+
       {/* Donación */}
       <DonationSection 
         selectedDonation={selectedDonation}
+        donationAmount={donationAmount}
         onDonationChange={onDonationChange}
+        onSectionRef={onDonationRef}
       />
 
       {/* Precio de venta */}

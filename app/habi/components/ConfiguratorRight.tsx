@@ -52,8 +52,12 @@ interface ConfiguratorRightProps {
   selectedDonation: string;
   donationAmount: number;
   onDonationChange: (optionId: string, amount: number) => void;
+  // Refs para detectar visibilidad de secciones
+  onPropertyRef?: (ref: HTMLDivElement | null) => void;
+  onComparablesRef?: (ref: HTMLDivElement | null) => void;
+  onSaleModalityRef?: (ref: HTMLDivElement | null) => void;
+  onDonationRef?: (ref: HTMLDivElement | null) => void;
   // Comparables y mapa
-  onComparablesVisibility?: (isVisible: boolean) => void;
   comparables: Comparable[];
   selectedComparable: Comparable | null;
   onSelectComparable: (comparable: Comparable | null) => void;
@@ -74,7 +78,10 @@ export default function ConfiguratorRight({
   selectedDonation,
   donationAmount,
   onDonationChange,
-  onComparablesVisibility,
+  onPropertyRef,
+  onComparablesRef,
+  onSaleModalityRef,
+  onDonationRef,
   comparables,
   selectedComparable,
   onSelectComparable
@@ -82,11 +89,14 @@ export default function ConfiguratorRight({
   return (
     <div className="pb-24">
       {/* Información del inmueble */}
-      <PropertyInfo propertyData={propertyData} />
+      <PropertyInfo 
+        propertyData={propertyData} 
+        onSectionRef={onPropertyRef}
+      />
 
       {/* Análisis de mercado con mapa */}
       <ComparablesSection 
-        onVisibilityChange={onComparablesVisibility}
+        onSectionRef={onComparablesRef}
         comparables={comparables}
         selectedComparable={selectedComparable}
         onSelectComparable={onSelectComparable}
@@ -96,7 +106,8 @@ export default function ConfiguratorRight({
       {/* Modalidad de venta */}
       <SaleModality 
         modalidadVenta={modalidadVenta} 
-        setModalidadVenta={setModalidadVenta} 
+        setModalidadVenta={setModalidadVenta}
+        onSectionRef={onSaleModalityRef}
       />
 
       {/* Forma de pago - Solo para Habi te compra */}
@@ -118,6 +129,7 @@ export default function ConfiguratorRight({
           selectedDonation={selectedDonation}
           donationAmount={donationAmount}
           onDonationChange={onDonationChange}
+          onDonationRef={onDonationRef}
         />
       )}
 
@@ -130,6 +142,7 @@ export default function ConfiguratorRight({
           selectedDonation={selectedDonation}
           donationAmount={donationAmount}
           onDonationChange={onDonationChange}
+          onDonationRef={onDonationRef}
         />
       )}
 
@@ -141,7 +154,9 @@ export default function ConfiguratorRight({
           valorMercado={valorMercado}
           setModalidadVenta={setModalidadVenta}
           selectedDonation={selectedDonation}
+          donationAmount={donationAmount}
           onDonationChange={onDonationChange}
+          onDonationRef={onDonationRef}
         />
       )}
     </div>
