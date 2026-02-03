@@ -5,6 +5,7 @@ import { HabiConfiguration, COSTOS_PERCENTAGES, PAYMENT_OPTIONS } from '../../ty
 import DonationSection from './DonationSection';
 import PersonalAdvisor from './PersonalAdvisor';
 import Modal from './Modal';
+import ExpenseCalculator from './calculator/ExpenseCalculator';
 
 interface HabiDirectSectionProps {
   configuration: HabiConfiguration;
@@ -199,6 +200,7 @@ export default function HabiDirectSection({
   onDonationRef
 }: HabiDirectSectionProps) {
   const [showServicePopup, setShowServicePopup] = useState(false);
+  const [showExpenseCalculator, setShowExpenseCalculator] = useState(false);
   
   // Precio final con donación descontada
   const finalPrice = currentPrice - donationAmount;
@@ -246,10 +248,16 @@ export default function HabiDirectSection({
               <p className="text-xs text-gray-600 mb-1">
                 Administración y servicios del inmueble durante el proceso de venta.
               </p>
-              <p className="text-xs text-gray-500">
+              <p className="text-xs text-gray-500 mb-2">
                 Estos gastos existen incluso si vendes por tu cuenta.<br />
                 Habi los asume por ti desde el inicio.
               </p>
+              <button
+                onClick={() => setShowExpenseCalculator(true)}
+                className="text-xs text-purple-600 font-medium hover:text-purple-700 transition"
+              >
+                Ver más →
+              </button>
             </div>
             <div className="text-right ml-4">
               <p className="font-semibold">{formatPrice(propertyMensual)}</p>
@@ -534,6 +542,19 @@ export default function HabiDirectSection({
         valorMercado={valorMercado}
         formatPrice={formatPrice}
       />
+
+      {/* Modal de Calculadora de Gastos */}
+      <Modal
+        isOpen={showExpenseCalculator}
+        onClose={() => setShowExpenseCalculator(false)}
+      >
+        <div className="max-h-[85vh] overflow-y-auto">
+          <ExpenseCalculator 
+            initialPropertyValue={valorMercado}
+            habiOfferValue={currentPrice}
+          />
+        </div>
+      </Modal>
     </>
   );
 }

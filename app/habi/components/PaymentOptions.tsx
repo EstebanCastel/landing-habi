@@ -1,6 +1,8 @@
 'use client';
 
+import { useState } from 'react';
 import { HabiConfiguration, PAYMENT_OPTIONS, COSTOS_PERCENTAGES } from '../../types/habi';
+import LiquidityCalculator from './LiquidityCalculator';
 
 interface PaymentOptionsProps {
   configuration: HabiConfiguration;
@@ -9,17 +11,54 @@ interface PaymentOptionsProps {
 }
 
 export default function PaymentOptions({ configuration, setConfiguration, valorMercado }: PaymentOptionsProps) {
+  const [showLiquidityCalculator, setShowLiquidityCalculator] = useState(false);
+
   const formatPrice = (price: number) => {
     return `$ ${price.toLocaleString('es-CO')}`;
   };
 
+  // Calcular la oferta Habi para pasar a la calculadora
+  const calculateHabiOffer = () => {
+    let precioBase = valorMercado * 0.782;
+    if (configuration.tramites === 'cliente') {
+      precioBase += (valorMercado * COSTOS_PERCENTAGES.tramites) / 100;
+    }
+    if (configuration.remodelacion === 'cliente') {
+      precioBase += (valorMercado * COSTOS_PERCENTAGES.remodelacion) / 100;
+    }
+    return precioBase;
+  };
+
+  // Si está mostrando la calculadora de liquidez
+  if (showLiquidityCalculator) {
+    return (
+      <LiquidityCalculator 
+        valorMercado={valorMercado}
+        ofertaHabi={calculateHabiOffer()}
+        onClose={() => setShowLiquidityCalculator(false)}
+      />
+    );
+  }
+
   return (
     <div id="forma-pago-section" className="px-6 py-8 bg-white border-b border-gray-200">
-      <div className="mb-6">
-        <h3 className="text-xl font-bold mb-2">Forma de pago</h3>
-        <p className="text-sm text-gray-600">
-          Entre más flexibilidad elijas, mayor será el precio total que recibes.
-        </p>
+      <div className="flex items-center justify-between mb-6">
+        <div>
+          <h3 className="text-xl font-bold mb-2">Forma de pago</h3>
+          <p className="text-sm text-gray-600">
+            Entre más flexibilidad elijas, mayor será el precio total que recibes.
+          </p>
+        </div>
+        <button
+          onClick={() => setShowLiquidityCalculator(true)}
+          className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold bg-purple-100 text-purple-700 rounded-lg hover:bg-purple-200 transition-colors border border-purple-200"
+          title="Simulador de liquidez"
+        >
+          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
+          </svg>
+          <span>Simular</span>
+        </button>
       </div>
 
       <div className="space-y-3">

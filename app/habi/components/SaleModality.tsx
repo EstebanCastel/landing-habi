@@ -231,14 +231,14 @@ const MODAL_CONTENT = {
   cuenta_propia: {
     title: 'Venta propia',
     subtitle: 'Tú tienes el control total.',
-    cardImage: '/Idea_visual_autonoma_202602031441 (1).jpeg',
+    cardImage: '/Image_202602031441.jpeg',
     sections: [
       {
         type: 'hero',
         title: '',
         description: '',
         mediaPlaceholder: 'hero-venta-propia',
-        image: '/Idea_visual_autonoma_202602031441 (1).jpeg',
+        image: '/Image_202602031441.jpeg',
         aspectRatio: '21/9'
       },
       {
@@ -253,7 +253,7 @@ const MODAL_CONTENT = {
         title: 'Letrero de "Se Vende"',
         description: 'Recibe un letrero profesional para colocar en tu ventana y atraer compradores de tu zona.',
         mediaPlaceholder: 'letrero',
-        image: '/Image_202602031441.jpeg'
+        image: '/Idea_visual_autonoma_202602031441 (1).jpeg'
       }
     ]
   }

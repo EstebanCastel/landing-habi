@@ -383,8 +383,31 @@ export default function Home() {
           {/* Fondo neutro por defecto */}
           <div className="absolute inset-0 bg-gradient-to-br from-purple-50 to-white" />
 
-          {/* Fondo neutro - sección 'other' (tabs de modalidad) */}
-          {/* Ya está cubierto por el fondo neutro por defecto */}
+          {/* Imagen de modalidad seleccionada - sección 'other' (tabs de modalidad) */}
+          <div 
+            className={`absolute inset-0 transition-opacity duration-500 ${activeSection === 'other' ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}
+          >
+            <Image
+              src={
+                modalidadVenta === 'habi' 
+                  ? '/Ultrarealistic_lifestyle_editorial_202602021.jpeg'
+                  : modalidadVenta === 'inmobiliaria'
+                  ? '/Ultrarealistic_lifestyle_editorial_202602021 (7).jpeg'
+                  : '/Image_202602031441.jpeg'
+              }
+              alt={
+                modalidadVenta === 'habi' 
+                  ? 'Compra directa Habi'
+                  : modalidadVenta === 'inmobiliaria'
+                  ? 'Inmobiliaria'
+                  : 'Venta propia'
+              }
+              fill
+              className="object-cover"
+              style={{ objectPosition: 'center 30%' }}
+            />
+            <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent" />
+          </div>
 
           {/* Imagen de configuración - sección 'configurator' */}
           <div 
@@ -536,15 +559,35 @@ export default function Home() {
       <div className="hidden md:flex flex-row flex-1">
         {/* Panel izquierdo - Imagen/Mapa fixed */}
         <div className="flex-1 relative">
-          {/* Fondo neutro (para sección 'other' - tabs de modalidad) */}
+          {/* Imagen de modalidad seleccionada (para sección 'other' - tabs de modalidad) */}
           <div 
             className={`
               fixed left-0 top-[90px] bottom-0 right-[480px] z-10
-              bg-gradient-to-br from-purple-50 to-white
               transition-opacity duration-500
               ${activeSection === 'other' ? 'opacity-100' : 'opacity-0 pointer-events-none'}
             `}
-          />
+          >
+            <Image
+              src={
+                modalidadVenta === 'habi' 
+                  ? '/Ultrarealistic_lifestyle_editorial_202602021.jpeg'
+                  : modalidadVenta === 'inmobiliaria'
+                  ? '/Ultrarealistic_lifestyle_editorial_202602021 (7).jpeg'
+                  : '/Image_202602031441.jpeg'
+              }
+              alt={
+                modalidadVenta === 'habi' 
+                  ? 'Compra directa Habi'
+                  : modalidadVenta === 'inmobiliaria'
+                  ? 'Inmobiliaria'
+                  : 'Venta propia'
+              }
+              fill
+              className="object-cover"
+              style={{ objectPosition: 'center 30%' }}
+            />
+            <div className="absolute inset-0 bg-gradient-to-r from-black/20 to-transparent" />
+          </div>
 
           {/* Imagen de configuración - sección 'configurator' */}
           <div 
