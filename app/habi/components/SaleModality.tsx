@@ -231,25 +231,29 @@ const MODAL_CONTENT = {
   cuenta_propia: {
     title: 'Venta propia',
     subtitle: 'Tú tienes el control total.',
-    cardImage: '/Image_202602021433.jpeg',
+    cardImage: '/Idea_visual_autonoma_202602031441 (1).jpeg',
     sections: [
       {
         type: 'hero',
-        title: 'Vende a tu manera',
-        description: 'Si prefieres manejar todo el proceso, te damos las herramientas para hacerlo exitosamente.',
-        mediaPlaceholder: 'hero-venta-propia'
+        title: '',
+        description: '',
+        mediaPlaceholder: 'hero-venta-propia',
+        image: '/Idea_visual_autonoma_202602031441 (1).jpeg',
+        aspectRatio: '21/9'
       },
       {
         type: 'feature',
         title: 'Guía completa de venta',
         description: 'Te entregamos una guía paso a paso con todo lo que necesitas saber para vender tu inmueble de forma rápida y segura.',
-        mediaPlaceholder: 'guia'
+        mediaPlaceholder: 'guia',
+        image: '/Ultrarealistic_lifestyle_editorial_202602031 (4).jpeg'
       },
       {
         type: 'feature',
         title: 'Letrero de "Se Vende"',
         description: 'Recibe un letrero profesional para colocar en tu ventana y atraer compradores de tu zona.',
-        mediaPlaceholder: 'letrero'
+        mediaPlaceholder: 'letrero',
+        image: '/Ultrarealistic_lifestyle_editorial_202602031 (5).jpeg'
       }
     ]
   }
