@@ -60,6 +60,7 @@ interface InmuebleData {
 }
 
 export default function Home() {
+  const [isLoading, setIsLoading] = useState(true);
   const [showStickyPrice, setShowStickyPrice] = useState(true);
   // Sección activa: 'property' (imagen), 'comparables' (mapa), 'configurator' (imagen config), 'payment' (imagen cuotas), 'donation' (videos), 'other' (fondo neutro)
   const [activeSection, setActiveSection] = useState<'property' | 'comparables' | 'configurator' | 'payment' | 'donation' | 'other'>('property');
@@ -156,8 +157,14 @@ export default function Home() {
         });
 
         setComparables(Array.from(uniqueComparables.values()));
+        
+        // Pequeño delay para asegurar que las imágenes empiecen a cargar
+        setTimeout(() => {
+          setIsLoading(false);
+        }, 800);
       } catch (error) {
         console.error('Error loading data:', error);
+        setIsLoading(false);
       }
     };
 
@@ -361,6 +368,17 @@ export default function Home() {
 
   // Altura del header en móvil (AnnouncementBar + Navbar)
   const mobileHeaderHeight = 90;
+
+  // Loading screen
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-white flex items-center justify-center">
+        <div className="flex flex-col items-center gap-4">
+          <div className="w-10 h-10 border-4 border-purple-200 border-t-purple-600 rounded-full animate-spin" />
+        </div>
+      </div>
+    );
+  }
 
   return (
     <main className="min-h-screen bg-white flex flex-col">
