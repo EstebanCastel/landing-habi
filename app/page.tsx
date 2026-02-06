@@ -214,8 +214,8 @@ function HomeContent() {
     }
   };
 
-  // Cargar datos del mapa y comparables
-  // Cuando hay nid de HubSpot, usa BigQuery; sino usa los JSONs estáticos como fallback
+  // Cargar datos del mapa y comparables desde BigQuery
+  // Ya no hay fallback a datos estáticos - si falla, simplemente no se muestran comparables
   useEffect(() => {
     const loadFromBigQuery = async (nid: string) => {
       try {
@@ -225,15 +225,16 @@ function HomeContent() {
           fetch(`/api/hesh?nid=${nid}`),
         ]);
         
-        if (!comparablesRes.ok) throw new Error(`BQ comparables API error: ${comparablesRes.status}`);
-        const data = await comparablesRes.json();
-        
-        if (data.inmueble) {
-          setInmueble(data.inmueble);
-        }
-        
-        if (data.comparables && data.comparables.length > 0) {
-          setComparables(data.comparables);
+        if (comparablesRes.ok) {
+          const data = await comparablesRes.json();
+          
+          if (data.inmueble) {
+            setInmueble(data.inmueble);
+          }
+          
+          if (data.comparables && data.comparables.length > 0) {
+            setComparables(data.comparables);
+          }
         }
         
         // Cargar HESH cost breakdown
@@ -246,59 +247,7 @@ function HomeContent() {
         
         setTimeout(() => setIsLoading(false), 800);
       } catch (error) {
-        console.error('Error loading from BigQuery, falling back to static:', error);
-        await loadFromStatic();
-      }
-    };
-    
-    const loadFromStatic = async () => {
-      try {
-        const [inmuebleRes, comparablesRes] = await Promise.all([
-          fetch('/inmueble.json'),
-          fetch('/comparables.json')
-        ]);
-        
-        const inmuebleData = await inmuebleRes.json();
-        const comparablesData = await comparablesRes.json();
-
-        setInmueble(inmuebleData);
-
-        const keys = Object.keys(comparablesData.nid);
-        const uniqueComparables = new Map<string, Comparable>();
-        
-        keys.forEach((key: string) => {
-          const nid = comparablesData.nid[key];
-          if (!uniqueComparables.has(nid)) {
-            const features = comparablesData.features[key] || '';
-            const habMatch = features.match(/(\d+)\s*Hab/i);
-            const habitaciones = habMatch ? habMatch[1] : '-';
-            
-            uniqueComparables.set(nid, {
-              id: key,
-              nid: nid,
-              latitude: parseFloat(comparablesData.latitude[key]),
-              longitude: parseFloat(comparablesData.longitude[key]),
-              area: comparablesData.area[key],
-              lastAskPrice: parseFloat(comparablesData.last_ask_price[key]),
-              valormt2: parseFloat(comparablesData.valormt2[key]),
-              features: comparablesData.features[key],
-              address: comparablesData.address[key],
-              condominium: comparablesData.condominium[key],
-              floorNum: comparablesData.floor_num[key],
-              yearsOld: comparablesData.years_old[key],
-              banos: comparablesData.banos[key],
-              garage: comparablesData.garage[key],
-              habitaciones: habitaciones,
-              confidenceLevel: comparablesData.confidence_levels[key],
-              category: comparablesData.comparable_category[key]
-            });
-          }
-        });
-
-        setComparables(Array.from(uniqueComparables.values()));
-        setTimeout(() => setIsLoading(false), 800);
-      } catch (error) {
-        console.error('Error loading static data:', error);
+        console.error('Error loading from BigQuery:', error);
         setIsLoading(false);
       }
     };
@@ -356,15 +305,17 @@ function HomeContent() {
       return;
     }
 
-    // CO: Prioridad: 1) nid directo por URL, 2) nid de HubSpot, 3) fallback estático
+    // CO: Prioridad: 1) nid directo por URL, 2) nid de HubSpot
+    // Ya no hay fallback a datos estáticos - si no hay datos válidos, se muestra página de error
     if (directNid) {
       loadFromBigQuery(directNid);
     } else if (bnplPrices?.nid) {
       loadFromBigQuery(bnplPrices.nid);
-    } else if (!dealUuid || hubspotFailed) {
-      loadFromStatic();
+    } else {
+      // Sin nid disponible, terminar carga
+      setIsLoading(false);
     }
-  }, [directNid, bnplPrices?.nid, bnplPrices?.country, dealUuid, hubspotFailed]);
+  }, [directNid, bnplPrices?.nid, bnplPrices?.country]);
 
   // Calcular precio según configuración
   // Si hay datos de HubSpot, usar los valores BNPL directos; si no, calcular con fórmula
@@ -605,8 +556,8 @@ function HomeContent() {
     );
   }
 
-  // Si no hay deal_uuid, mostrar pantalla de acceso no válido
-  if (!dealUuid) {
+  // Si no hay deal_uuid o hubo error al cargar datos de HubSpot, mostrar pantalla de acceso no válido
+  if (!dealUuid || hubspotFailed) {
     return (
       <div className="min-h-screen bg-white flex items-center justify-center px-4">
         <div className="text-center max-w-md">
