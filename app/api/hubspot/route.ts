@@ -99,7 +99,7 @@ async function getDealById(dealId: string, apiKey: string) {
   const url = `https://api.hubapi.com/crm/v3/objects/deals/${dealId}`
   
   const params = new URLSearchParams({
-    properties: 'bnpl_3,bnpl_6,bnpl_9,precio_comite,whatsapp_asesor,deal_uuid,dealname,bnpl_1__comercial_,bnpl_3__comercial_,bnpl_6__comercial_,bnpl_9__comercial_,valor_subsidiado,nombre_del_conjunto,area_construida,direccion,numero_habitaciones,numero_de_banos,tipo_inmueble_id,negocio_aplica_para_bnpl_,razon_de_venta_usuario_gabi_mx,pipeline,final_prestamo_mx'
+    properties: 'bnpl_3,bnpl_6,bnpl_9,precio_comite,whatsapp_asesor,deal_uuid,dealname,bnpl_1__comercial_,bnpl_3__comercial_,bnpl_6__comercial_,bnpl_9__comercial_,valor_subsidiado,nombre_del_conjunto,area_construida,direccion,numero_habitaciones,numero_de_banos,tipo_inmueble_id,negocio_aplica_para_bnpl_,razon_de_venta_usuario_gabi_mx,pipeline,oferta_final_prestamo_mx_calculada'
   })
   
   const response = await fetch(`${url}?${params}`, {
