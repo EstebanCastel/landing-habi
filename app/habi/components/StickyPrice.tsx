@@ -21,7 +21,7 @@ export default function StickyPrice({
   precioCuentaPropia = 0,
   donationAmount = 0,
   onHabiClick,
-  evaluacionInmueble
+  evaluacionInmueble: _evaluacionInmueble
 }: StickyPriceProps) {
   // Determinar precio y texto según modalidad (ya con donación descontada)
   const getContent = () => {

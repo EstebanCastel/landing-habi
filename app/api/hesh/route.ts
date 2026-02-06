@@ -53,7 +53,7 @@ function parsePythonDict(raw: string): Record<string, any> | null {
   if (!raw) return null
   
   try {
-    let jsonStr = raw
+    const jsonStr = raw
       // Reemplazar None → null
       .replace(/\bNone\b/g, 'null')
       // Reemplazar nan → null
@@ -70,7 +70,7 @@ function parsePythonDict(raw: string): Record<string, any> | null {
     // Intentar un parse más agresivo
     try {
       // A veces hay tuples () en Python, convertir a arrays []
-      let jsonStr = raw
+      const jsonStr = raw
         .replace(/\bNone\b/g, 'null')
         .replace(/\bnan\b/g, 'null')
         .replace(/\bTrue\b/g, 'true')

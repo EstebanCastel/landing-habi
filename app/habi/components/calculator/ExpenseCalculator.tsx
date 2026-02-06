@@ -29,7 +29,7 @@ interface HabiVsMarketComparisonProps {
   habiOffer: number;
 }
 
-function HabiVsMarketComparison({ propertyValue, totalExpenses, netAmount, habiOffer }: HabiVsMarketComparisonProps) {
+function HabiVsMarketComparison({ totalExpenses, netAmount, habiOffer }: HabiVsMarketComparisonProps) {
   const [progress, setProgress] = useState(1);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
 
