@@ -1,4 +1,48 @@
 /* Calculator Styles */
+
+/* Wrapper principal - resetea estilos base dentro de la calculadora
+   para contrarrestar el preflight de Tailwind CSS */
+.calculator-wrapper {
+  font-family: "Open Sans", sans-serif;
+  font-style: normal;
+  color: #111827;
+  line-height: 1.5;
+}
+
+.calculator-wrapper h2,
+.calculator-wrapper h3,
+.calculator-wrapper h4 {
+  font-weight: 700;
+  line-height: 1.3;
+}
+
+.calculator-wrapper p {
+  margin: 0;
+}
+
+.calculator-wrapper input[type="text"] {
+  appearance: none;
+  background-color: #ffffff;
+}
+
+.calculator-wrapper button {
+  cursor: pointer;
+}
+
+.calculator-wrapper label {
+  display: flex;
+}
+
+/* Container embebido (dentro de modal) */
+.calculator-container-embedded {
+  background-color: #ffffff;
+  display: flex;
+  flex-direction: column;
+  font-family: "Open Sans", sans-serif;
+  font-style: normal;
+}
+
+/* Container standalone (página completa) */
 .calculator-container {
   min-height: 100vh;
   background-color: #ffffff;
@@ -6,6 +50,17 @@
   flex-direction: column;
   font-family: "Open Sans", sans-serif;
   font-style: normal;
+}
+
+/* Results embebido */
+.results-section-embedded {
+  background-color: #ffffff;
+  font-family: "Open Sans", sans-serif;
+  font-style: normal;
+}
+
+.calculator-hidden {
+  display: none;
 }
 
 /* Header Styles */

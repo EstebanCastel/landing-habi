@@ -1,79 +1,89 @@
 'use client';
 
-import { useState } from 'react';
 import { HabiConfiguration, PAYMENT_OPTIONS, COSTOS_PERCENTAGES } from '../../types/habi';
-import LiquidityCalculator from './LiquidityCalculator';
+import type { HubSpotProperties } from '../../lib/hubspot';
 
 interface PaymentOptionsProps {
   configuration: HabiConfiguration;
   setConfiguration: (config: HabiConfiguration) => void;
   valorMercado: number;
+  bnplPrices?: HubSpotProperties | null;
 }
 
-export default function PaymentOptions({ configuration, setConfiguration, valorMercado }: PaymentOptionsProps) {
-  const [showLiquidityCalculator, setShowLiquidityCalculator] = useState(false);
-
+export default function PaymentOptions({ configuration, setConfiguration, valorMercado, bnplPrices }: PaymentOptionsProps) {
   const formatPrice = (price: number) => {
     return `$ ${price.toLocaleString('es-CO')}`;
   };
 
-  // Calcular la oferta Habi para pasar a la calculadora
-  const calculateHabiOffer = () => {
-    let precioBase = valorMercado * 0.782;
-    if (configuration.tramites === 'cliente') {
-      precioBase += (valorMercado * COSTOS_PERCENTAGES.tramites) / 100;
-    }
-    if (configuration.remodelacion === 'cliente') {
-      precioBase += (valorMercado * COSTOS_PERCENTAGES.remodelacion) / 100;
-    }
-    return precioBase;
+  // Mapear las opciones de pago a precios reales de BNPL si están disponibles
+  const getBnplPrice = (optionId: string): number | null => {
+    if (!bnplPrices) return null;
+    
+    const priceMap: Record<string, string | undefined> = {
+      'contado': bnplPrices.precio_comite,
+      '3cuotas': bnplPrices.bnpl3,
+      '6cuotas': bnplPrices.bnpl6,
+      '9cuotas': bnplPrices.bnpl9,
+    };
+    
+    const priceStr = priceMap[optionId];
+    if (!priceStr) return null;
+    
+    const price = Number(priceStr.replace(/[^\d]/g, ''));
+    return isNaN(price) ? null : price;
   };
 
-  // Si está mostrando la calculadora de liquidez
-  if (showLiquidityCalculator) {
-    return (
-      <LiquidityCalculator 
-        valorMercado={valorMercado}
-        ofertaHabi={calculateHabiOffer()}
-        onClose={() => setShowLiquidityCalculator(false)}
-      />
-    );
-  }
+  // Calcular porcentaje de diferencia entre un precio BNPL y el precio_comite base
+  const getBnplPercentage = (optionId: string): string | null => {
+    if (!bnplPrices) return null;
+    
+    const price = getBnplPrice(optionId);
+    const basePrice = getBnplPrice('contado');
+    
+    if (!price || !basePrice || basePrice === 0) return null;
+    
+    const diff = ((price - basePrice) / basePrice) * 100;
+    if (diff === 0) return 'BASE';
+    return `+${diff.toFixed(1)}%`;
+  };
 
   return (
     <div id="forma-pago-section" className="px-6 py-8 bg-white border-b border-gray-200">
-      <div className="flex items-center justify-between mb-6">
-        <div>
-          <h3 className="text-xl font-bold mb-2">Forma de pago</h3>
-          <p className="text-sm text-gray-600">
-            Entre más flexibilidad elijas, mayor será el precio total que recibes.
-          </p>
-        </div>
-        <button
-          onClick={() => setShowLiquidityCalculator(true)}
-          className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold bg-purple-100 text-purple-700 rounded-lg hover:bg-purple-200 transition-colors border border-purple-200"
-          title="Simulador de liquidez"
-        >
-          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
-          </svg>
-          <span>Simular</span>
-        </button>
+      <div className="mb-6">
+        <h3 className="text-xl font-bold mb-2">Forma de pago</h3>
+        <p className="text-sm text-gray-600">
+          Entre más flexibilidad elijas, mayor será el precio total que recibes.
+        </p>
       </div>
 
       <div className="space-y-3">
         {PAYMENT_OPTIONS.map((option) => {
-          // Calcular precio base SIN forma de pago
-          let precioBase = valorMercado * 0.782;
-          if (configuration.tramites === 'cliente') {
-            precioBase += (valorMercado * COSTOS_PERCENTAGES.tramites) / 100;
-          }
-          if (configuration.remodelacion === 'cliente') {
-            precioBase += (valorMercado * COSTOS_PERCENTAGES.remodelacion) / 100;
+          // Si hay precios BNPL de HubSpot, usarlos directamente
+          const bnplPrice = getBnplPrice(option.id);
+          const bnplPercentage = getBnplPercentage(option.id);
+          
+          let displayPrice: number;
+          let displayBadge: string | undefined;
+          
+          if (bnplPrice !== null) {
+            displayPrice = bnplPrice;
+            displayBadge = bnplPercentage || option.badge;
+          } else {
+            let precioBase = valorMercado * 0.782;
+            if (configuration.tramites === 'cliente') {
+              precioBase += (valorMercado * COSTOS_PERCENTAGES.tramites) / 100;
+            }
+            if (configuration.remodelacion === 'cliente') {
+              precioBase += (valorMercado * COSTOS_PERCENTAGES.remodelacion) / 100;
+            }
+            displayPrice = precioBase * (1 + option.percentage / 100);
+            displayBadge = option.badge;
           }
           
-          // Aplicar porcentaje de esta forma de pago específica
-          const priceWithOption = precioBase * (1 + option.percentage / 100);
+          // Calcular valor de cada cuota mensual
+          const numCuotas = option.id === 'contado' ? 1 : parseInt(option.id);
+          const valorCuota = numCuotas > 1 ? Math.round(displayPrice / numCuotas) : null;
+          
           const isSelected = configuration.formaPago === option.id;
           const isRecommended = option.id === '9cuotas';
           
@@ -90,9 +100,9 @@ export default function PaymentOptions({ configuration, setConfiguration, valorM
               <div className="flex items-center justify-between mb-2">
                 <div className="flex items-center space-x-2">
                   <span className="font-medium">{option.label}</span>
-                  {option.percentage > 0 && (
+                  {displayBadge && (
                     <span className="text-xs px-2 py-0.5 bg-purple-100 text-purple-700 rounded font-semibold">
-                      +{option.percentage}%
+                      {displayBadge}
                     </span>
                   )}
                 </div>
@@ -101,9 +111,16 @@ export default function PaymentOptions({ configuration, setConfiguration, valorM
                 )}
               </div>
               <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1">
-                <span className="text-sm text-gray-600">{option.description}</span>
+                <div>
+                  <span className="text-sm text-gray-600">{option.description}</span>
+                  {valorCuota && (
+                    <p className="text-xs text-purple-600 mt-0.5">
+                      {formatPrice(valorCuota)} / cuota
+                    </p>
+                  )}
+                </div>
                 <span className="text-lg font-bold">
-                  {formatPrice(Math.round(priceWithOption))}
+                  {formatPrice(Math.round(displayPrice))}
                 </span>
               </div>
             </button>
@@ -113,4 +130,3 @@ export default function PaymentOptions({ configuration, setConfiguration, valorM
     </div>
   );
 }
-

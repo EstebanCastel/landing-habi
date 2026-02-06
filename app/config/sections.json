@@ -1,0 +1,91 @@
+{
+  "sections": [
+    {
+      "id": "property-info",
+      "component": "PropertyInfo",
+      "panelImage": "/Ultrarealistic_lifestyle_editorial_202602021 (8).jpeg",
+      "panelType": "image",
+      "panelImagePosition": "center 40%",
+      "refName": "property",
+      "enabled": true
+    },
+    {
+      "id": "comparables",
+      "component": "ComparablesSection",
+      "panelType": "map",
+      "refName": "comparables",
+      "enabled": true
+    },
+    {
+      "id": "sale-modality",
+      "component": "SaleModality",
+      "panelType": "dynamic-modality",
+      "panelImages": {
+        "habi": "/Ultrarealistic_lifestyle_editorial_202602021.jpeg",
+        "inmobiliaria": "/Ultrarealistic_lifestyle_editorial_202602021 (7).jpeg",
+        "cuenta_propia": "/Image_202602031441.jpeg"
+      },
+      "panelImagePosition": "center 30%",
+      "refName": "saleModality",
+      "availableModalities": ["habi"],
+      "enabled": true
+    },
+    {
+      "id": "payment-options",
+      "component": "PaymentOptions",
+      "panelImage": "/Ultrarealistic_lifestyle_editorial_202602031 (3).jpeg",
+      "panelType": "image",
+      "panelImagePosition": "center 40%",
+      "dependsOn": { "modalidadVenta": "habi", "bnplEnabled": "true" },
+      "enabled": true
+    },
+    {
+      "id": "liquidity-section",
+      "component": "LiquiditySection",
+      "panelImage": "/Ultrarealistic_lifestyle_editorial_202602031 (3).jpeg",
+      "panelType": "image",
+      "panelImagePosition": "center 40%",
+      "dependsOn": { "modalidadVenta": "habi", "razonVentaLiquidez": "true" },
+      "enabled": true
+    },
+    {
+      "id": "habi-direct",
+      "component": "HabiDirectSection",
+      "panelImage": "/Image_202602031055.jpeg",
+      "panelType": "image",
+      "panelImagePosition": "center 30%",
+      "dependsOn": { "modalidadVenta": "habi" },
+      "refName": "donation",
+      "showCostToggles": false,
+      "showDonation": false,
+      "enabled": true
+    },
+    {
+      "id": "inmobiliaria",
+      "component": "InmobiliariaSection",
+      "panelImage": "/Ultrarealistic_lifestyle_editorial_202602021 (7).jpeg",
+      "panelType": "image",
+      "panelImagePosition": "center 30%",
+      "dependsOn": { "modalidadVenta": "inmobiliaria" },
+      "refName": "donation",
+      "enabled": false
+    },
+    {
+      "id": "sell-by-yourself",
+      "component": "SellByYourselfSection",
+      "panelImage": "/Image_202602031441.jpeg",
+      "panelType": "image",
+      "panelImagePosition": "center 30%",
+      "dependsOn": { "modalidadVenta": "cuenta_propia" },
+      "refName": "donation",
+      "enabled": false
+    }
+  ],
+  "showChatbot": false,
+  "donationVideos": [
+    "/DJI_20251210101636_0086_D.MP4",
+    "/DJI_20251210171250_0012_D.MP4",
+    "/DJI_20251210221910_0517_D.MP4",
+    "/DJI_20251210222059_0518_D.MP4"
+  ]
+}

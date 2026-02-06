@@ -1,0 +1,365 @@
+import { NextRequest, NextResponse } from 'next/server'
+import { checkRateLimit, getClientIp, isValidUUID, sanitizeUUID } from '@/app/lib/rate-limiter'
+
+// Marcar esta ruta como dinámica
+export const dynamic = 'force-dynamic'
+
+// Mensaje de error cuando no se pueden obtener los datos
+const ERROR_MESSAGE = {
+  error: true,
+  message: "Tuvimos un problema al obtener los precios. Por favor, contacta con tu asesor para más información."
+}
+
+// Pipeline HubSpot → mercado
+// Los IDs pueden variar; agregar todos los que correspondan a cada país
+const PIPELINES_MX = [
+  '731899270', // Sellers - Market Maker MX (NUEVO) - internal value
+  '10867264',  // ID observado en API
+]
+const PIPELINES_CO = [
+  '798578615', // Sellers - Market Maker CO (NUEVO) - internal value
+]
+
+function pipelineToCountry(pipeline: string | undefined | null): 'CO' | 'MX' {
+  const p = String(pipeline ?? '').trim()
+  if (PIPELINES_MX.includes(p)) return 'MX'
+  if (PIPELINES_CO.includes(p)) return 'CO'
+  return 'CO' // default
+}
+
+/**
+ * Convierte un número de HubSpot (con decimales) a entero
+ * Ejemplo: "584866367.68400" -> "584866367"
+ */
+function parseHubSpotNumber(value: string | undefined | null): string | null {
+  if (!value) return null
+  
+  // Convertir a número y redondear para quitar decimales
+  const num = parseFloat(value)
+  if (isNaN(num)) return null
+  
+  // Retornar como string sin decimales
+  return Math.round(num).toString()
+}
+
+/**
+ * Busca un deal por UUID usando la API de búsqueda
+ */
+async function searchDealByUuid(dealUuid: string, apiKey: string) {
+  const url = 'https://api.hubapi.com/crm/v3/objects/deals/search'
+  
+  const searchBody = {
+    filterGroups: [
+      {
+        filters: [
+          {
+            propertyName: 'deal_uuid',
+            operator: 'EQ',
+            value: dealUuid
+          }
+        ]
+      }
+    ],
+    properties: ['bnpl_3', 'bnpl_6', 'bnpl_9', 'precio_comite', 'whatsapp_asesor', 'deal_uuid', 'bnpl_1__comercial_', 'bnpl_3__comercial_', 'bnpl_6__comercial_', 'bnpl_9__comercial_', 'valor_subsidiado', 'nombre_del_conjunto', 'area_construida', 'direccion', 'numero_habitaciones', 'numero_de_banos', 'tipo_inmueble_id', 'negocio_aplica_para_bnpl_', 'razon_de_venta_usuario_gabi_mx', 'pipeline', 'final_prestamo_mx'],
+    limit: 1
+  }
+  
+  const response = await fetch(url, {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${apiKey}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(searchBody),
+    signal: AbortSignal.timeout(10000),
+    cache: 'no-store'
+  })
+  
+  if (!response.ok) {
+    console.error(`HubSpot API error: ${response.status} ${response.statusText}`)
+    return null
+  }
+
+  const data = await response.json()
+  
+  if (!data.results || data.results.length === 0) {
+    return null
+  }
+  
+  return {
+    id: data.results[0].id,
+    properties: data.results[0].properties || {}
+  }
+}
+
+/**
+ * Obtiene un deal directamente por su ID
+ */
+async function getDealById(dealId: string, apiKey: string) {
+  const url = `https://api.hubapi.com/crm/v3/objects/deals/${dealId}`
+  
+  const params = new URLSearchParams({
+    properties: 'bnpl_3,bnpl_6,bnpl_9,precio_comite,whatsapp_asesor,deal_uuid,dealname,bnpl_1__comercial_,bnpl_3__comercial_,bnpl_6__comercial_,bnpl_9__comercial_,valor_subsidiado,nombre_del_conjunto,area_construida,direccion,numero_habitaciones,numero_de_banos,tipo_inmueble_id,negocio_aplica_para_bnpl_,razon_de_venta_usuario_gabi_mx,pipeline,final_prestamo_mx'
+  })
+  
+  const response = await fetch(`${url}?${params}`, {
+    method: 'GET',
+    headers: {
+      'Authorization': `Bearer ${apiKey}`,
+      'Content-Type': 'application/json',
+    },
+    signal: AbortSignal.timeout(10000),
+    cache: 'no-store'
+  })
+  
+  if (!response.ok) {
+    console.error(`HubSpot API error: ${response.status} ${response.statusText}`)
+    return null
+  }
+
+  const data = await response.json()
+  return {
+    id: data.id || dealId,
+    properties: data.properties || {}
+  }
+}
+
+export async function GET(request: NextRequest) {
+  try {
+    // 1. Rate Limiting
+    const clientIp = getClientIp(request)
+    const rateLimitResult = checkRateLimit(clientIp)
+    
+    const headers = {
+      'X-RateLimit-Limit': '30',
+      'X-RateLimit-Remaining': rateLimitResult.remaining.toString(),
+      'X-RateLimit-Reset': new Date(rateLimitResult.resetTime).toISOString(),
+    }
+    
+    if (!rateLimitResult.allowed) {
+      console.warn(`Rate limit exceeded for IP: ${clientIp}`)
+      return NextResponse.json(
+        { 
+          error: 'Too many requests',
+          message: 'Rate limit exceeded. Please try again later.',
+          retryAfter: Math.ceil((rateLimitResult.resetTime - Date.now()) / 1000)
+        },
+        { status: 429, headers }
+      )
+    }
+
+    // 2. Validar parámetros
+    const { searchParams } = request.nextUrl
+    const dealUuid = searchParams.get('deal_uuid')
+    const dealId = searchParams.get('deal_id')
+    
+    if (!dealUuid && !dealId) {
+      return NextResponse.json(
+        { error: 'deal_uuid or deal_id is required' },
+        { status: 400, headers }
+      )
+    }
+
+    // 3. Validar UUID
+    if (dealUuid) {
+      const sanitized = sanitizeUUID(dealUuid)
+      if (!isValidUUID(sanitized)) {
+        console.warn(`Invalid UUID format: ${dealUuid} from IP: ${clientIp}`)
+        return NextResponse.json(
+          { error: 'Invalid UUID format' },
+          { status: 400, headers }
+        )
+      }
+    }
+
+    // 4. Verificar token
+    const apiKey = process.env.HUBSPOT_ACCESS_TOKEN
+    
+    if (!apiKey) {
+      console.warn('HUBSPOT_ACCESS_TOKEN not configured')
+      return NextResponse.json(ERROR_MESSAGE, { headers, status: 503 })
+    }
+    
+    // 5. Obtener datos de HubSpot
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    let dealResult: { id: string; properties: Record<string, any> } | null = null
+    
+    if (dealId) {
+      dealResult = await getDealById(dealId, apiKey)
+    }
+    
+    if (!dealResult && dealUuid) {
+      const sanitized = sanitizeUUID(dealUuid)
+      dealResult = await searchDealByUuid(sanitized, apiKey)
+    }
+    
+    // 6. Deal no encontrado
+    if (!dealResult) {
+      console.warn(`Deal not found - UUID: ${dealUuid}, ID: ${dealId}`)
+      return NextResponse.json(ERROR_MESSAGE, { headers, status: 404 })
+    }
+    
+    const { id: hubspotDealId, properties } = dealResult
+    
+    // 7. Parsear propiedades
+    const bnpl3BaseValue = parseHubSpotNumber(properties.bnpl_3)
+    const bnpl6BaseValue = parseHubSpotNumber(properties.bnpl_6)
+    const bnpl9BaseValue = parseHubSpotNumber(properties.bnpl_9)
+    const precioComiteValue = parseHubSpotNumber(properties.precio_comite)
+    
+    const bnpl1ComercialValue = parseHubSpotNumber(properties.bnpl_1__comercial_)
+    const bnpl3ComercialValue = parseHubSpotNumber(properties.bnpl_3__comercial_)
+    const bnpl6ComercialValue = parseHubSpotNumber(properties.bnpl_6__comercial_)
+    const bnpl9ComercialValue = parseHubSpotNumber(properties.bnpl_9__comercial_)
+    const valorSubsidiadoValue = parseHubSpotNumber(properties.valor_subsidiado)
+    
+    // Lógica de negocio BNPL con límite máximo global
+    let bnpl1Value: string
+    let bnpl3Value: string
+    let bnpl6Value: string
+    let bnpl9Value: string
+    
+    const bnpl1ComercialNum = bnpl1ComercialValue ? Number(bnpl1ComercialValue) : null
+    const bnpl3ComercialNum = bnpl3ComercialValue ? Number(bnpl3ComercialValue) : null
+    const bnpl6ComercialNum = bnpl6ComercialValue ? Number(bnpl6ComercialValue) : null
+    const bnpl9ComercialNum = bnpl9ComercialValue ? Number(bnpl9ComercialValue) : null
+    const precioComiteNum = precioComiteValue ? Number(precioComiteValue) : 0
+    const valorSubsidiadoNum = valorSubsidiadoValue ? Number(valorSubsidiadoValue) : 0
+    const bnpl3BaseNum = bnpl3BaseValue ? Number(bnpl3BaseValue) : 0
+    const bnpl6BaseNum = bnpl6BaseValue ? Number(bnpl6BaseValue) : 0
+    const bnpl9BaseNum = bnpl9BaseValue ? Number(bnpl9BaseValue) : 0
+    
+    const porcentajeCrecimiento3 = precioComiteNum > 0 ? (bnpl3BaseNum - precioComiteNum) / precioComiteNum : 0
+    const porcentajeCrecimiento6 = precioComiteNum > 0 ? (bnpl6BaseNum - precioComiteNum) / precioComiteNum : 0
+    const porcentajeCrecimiento9 = precioComiteNum > 0 ? (bnpl9BaseNum - precioComiteNum) / precioComiteNum : 0
+    
+    const incremento1a3 = bnpl3BaseNum > 0 && precioComiteNum > 0 ? bnpl3BaseNum / precioComiteNum : 1
+    const incremento3a6 = bnpl6BaseNum > 0 && bnpl3BaseNum > 0 ? bnpl6BaseNum / bnpl3BaseNum : 1
+    const incremento6a9 = bnpl9BaseNum > 0 && bnpl6BaseNum > 0 ? bnpl9BaseNum / bnpl6BaseNum : 1
+    
+    const limiteMaximoGlobal = precioComiteNum + valorSubsidiadoNum + 500000
+    const limiteMaximoBnpl1 = limiteMaximoGlobal
+    const limiteMaximoBnpl3 = Math.round(limiteMaximoGlobal * (1 + porcentajeCrecimiento3))
+    const limiteMaximoBnpl6 = Math.round(limiteMaximoGlobal * (1 + porcentajeCrecimiento6))
+    const limiteMaximoBnpl9 = Math.round(limiteMaximoGlobal * (1 + porcentajeCrecimiento9))
+    
+    const hayAlgunValorComercial = bnpl1ComercialNum || bnpl3ComercialNum || bnpl6ComercialNum || bnpl9ComercialNum
+    
+    if (!hayAlgunValorComercial) {
+      bnpl1Value = precioComiteValue || "0"
+      bnpl3Value = bnpl3BaseValue || "0"
+      bnpl6Value = bnpl6BaseValue || "0"
+      bnpl9Value = bnpl9BaseValue || "0"
+    } else {
+      // BNPL1
+      if (bnpl1ComercialNum && bnpl1ComercialNum > 0 && bnpl1ComercialNum <= limiteMaximoBnpl1) {
+        bnpl1Value = bnpl1ComercialValue!
+      } else if (bnpl1ComercialNum && bnpl1ComercialNum > limiteMaximoBnpl1) {
+        bnpl1Value = limiteMaximoBnpl1.toString()
+      } else {
+        bnpl1Value = precioComiteValue || "0"
+      }
+      
+      const valorBnpl1Final = Number(bnpl1Value)
+      
+      // BNPL3
+      let valorBnpl3Final: number
+      if (bnpl3ComercialNum && bnpl3ComercialNum > 0) {
+        if (bnpl3ComercialNum <= limiteMaximoBnpl3) {
+          valorBnpl3Final = bnpl3ComercialNum
+          bnpl3Value = bnpl3ComercialValue!
+        } else {
+          valorBnpl3Final = limiteMaximoBnpl3
+          bnpl3Value = limiteMaximoBnpl3.toString()
+        }
+      } else {
+        valorBnpl3Final = Math.round(valorBnpl1Final * incremento1a3)
+        valorBnpl3Final = Math.min(valorBnpl3Final, limiteMaximoBnpl3)
+        bnpl3Value = valorBnpl3Final.toString()
+      }
+      
+      // BNPL6
+      let valorBnpl6Final: number
+      if (bnpl6ComercialNum && bnpl6ComercialNum > 0) {
+        if (bnpl6ComercialNum <= limiteMaximoBnpl6) {
+          valorBnpl6Final = bnpl6ComercialNum
+          bnpl6Value = bnpl6ComercialValue!
+        } else {
+          valorBnpl6Final = limiteMaximoBnpl6
+          bnpl6Value = limiteMaximoBnpl6.toString()
+        }
+      } else {
+        valorBnpl6Final = Math.round(valorBnpl3Final * incremento3a6)
+        valorBnpl6Final = Math.min(valorBnpl6Final, limiteMaximoBnpl6)
+        bnpl6Value = valorBnpl6Final.toString()
+      }
+      
+      // BNPL9
+      if (bnpl9ComercialNum && bnpl9ComercialNum > 0) {
+        if (bnpl9ComercialNum <= limiteMaximoBnpl9) {
+          bnpl9Value = bnpl9ComercialValue!
+        } else {
+          bnpl9Value = limiteMaximoBnpl9.toString()
+        }
+      } else {
+        let valorBnpl9Final = Math.round(valorBnpl6Final * incremento6a9)
+        valorBnpl9Final = Math.min(valorBnpl9Final, limiteMaximoBnpl9)
+        bnpl9Value = valorBnpl9Final.toString()
+      }
+    }
+    
+    // Validación final de seguridad
+    if (Number(bnpl1Value) > limiteMaximoBnpl1) bnpl1Value = limiteMaximoBnpl1.toString()
+    if (Number(bnpl3Value) > limiteMaximoBnpl3) bnpl3Value = limiteMaximoBnpl3.toString()
+    if (Number(bnpl6Value) > limiteMaximoBnpl6) bnpl6Value = limiteMaximoBnpl6.toString()
+    if (Number(bnpl9Value) > limiteMaximoBnpl9) bnpl9Value = limiteMaximoBnpl9.toString()
+    
+    // Mapper pipeline → país (CO / MX)
+    const pipeline = properties.pipeline ?? null
+    const country = pipelineToCountry(pipeline)
+    
+    let precioComiteFinal = bnpl1Value
+    let bnpl3Final = bnpl3Value
+    let bnpl6Final = bnpl6Value
+    let bnpl9Final = bnpl9Value
+    let negocioAplicaBnpl = properties.negocio_aplica_para_bnpl_ || null
+    
+    if (country === 'MX') {
+      // México: no tiene pago a cuotas; precio = final_prestamo_mx
+      const finalPrestamoMx = parseHubSpotNumber(properties.final_prestamo_mx)
+      precioComiteFinal = finalPrestamoMx || bnpl1Value
+      bnpl3Final = '0'
+      bnpl6Final = '0'
+      bnpl9Final = '0'
+      negocioAplicaBnpl = 'no' // para que no se renderice la sección de cuotas
+    }
+    
+    const result = {
+      nid: hubspotDealId,
+      pipeline: pipeline,
+      country,
+      bnpl3: bnpl3Final,
+      bnpl6: bnpl6Final,
+      bnpl9: bnpl9Final,
+      precio_comite: precioComiteFinal,
+      whatsapp_asesor: properties.whatsapp_asesor,
+      nombre_del_conjunto: properties.nombre_del_conjunto || null,
+      area_construida: properties.area_construida || null,
+      direccion: properties.direccion || null,
+      numero_habitaciones: properties.numero_habitaciones || null,
+      numero_de_banos: properties.numero_de_banos || null,
+      tipo_inmueble_id: properties.tipo_inmueble_id || null,
+      negocio_aplica_para_bnpl: negocioAplicaBnpl,
+      razon_de_venta: properties.razon_de_venta_usuario_gabi_mx || null,
+    }
+    
+    return NextResponse.json(result, { headers })
+    
+  } catch (error) {
+    console.error('Error en endpoint de HubSpot:', error)
+    return NextResponse.json(ERROR_MESSAGE, { 
+      status: 500,
+      headers: { 'X-Error': 'Internal server error' }
+    })
+  }
+}

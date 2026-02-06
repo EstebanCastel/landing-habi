@@ -158,7 +158,7 @@ export default function ComparablesSection({
                 {/* Tooltip con precio */}
                 <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-1.5 whitespace-nowrap">
                   <div className="bg-purple-600 text-white text-[11px] font-semibold px-2 py-1 rounded-md shadow-lg">
-                    Tu oferta
+                    Evaluación
                     <div className="text-[10px] font-normal opacity-90">{formatPrice(ofertaHabi)}</div>
                   </div>
                   <div className="w-1.5 h-1.5 bg-purple-600 rotate-45 absolute left-1/2 -translate-x-1/2 -bottom-0.5"></div>

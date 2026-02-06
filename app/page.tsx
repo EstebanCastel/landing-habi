@@ -1,14 +1,19 @@
 'use client';
 
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useRef, useCallback, Suspense } from 'react';
 import dynamic from 'next/dynamic';
 import Image from 'next/image';
+import { useSearchParams, usePathname } from 'next/navigation';
 import AnnouncementBar from './habi/components/AnnouncementBar';
 import Navbar from './habi/components/Navbar';
-import ConfiguratorRight from './habi/components/ConfiguratorRight';
+import SectionRenderer from './habi/components/SectionRenderer';
 import StickyPrice from './habi/components/StickyPrice';
 import AIAssistant from './habi/components/AIAssistant';
 import { HabiConfiguration, PAYMENT_OPTIONS, COSTOS_PERCENTAGES } from './types/habi';
+import { getHubSpotProperties, type HubSpotProperties } from './lib/hubspot';
+import type { HeshCostBreakdown } from './api/hesh/route';
+import sectionsConfig from './config/sections.json';
+import type { LandingConfig } from './config/componentsRegistry';
 
 // Importar el mapa dinámicamente para evitar SSR issues con Leaflet
 const ComparablesMap = dynamic(() => import('./habi/components/ComparablesMap'), { 
@@ -20,8 +25,8 @@ const ComparablesMap = dynamic(() => import('./habi/components/ComparablesMap'),
   )
 });
 
-// Datos de ejemplo - En producción vendrán de HubSpot
-const PROPERTY_DATA = {
+// Datos de la propiedad - valorMercado se actualizará con datos de HubSpot
+const DEFAULT_PROPERTY_DATA = {
   valorMercado: 190000000,
   direccion: 'Calle 123 #45-67',
   tipoInmueble: 'Apartamento',
@@ -59,8 +64,27 @@ interface InmuebleData {
   last_ask_price: number;
 }
 
-export default function Home() {
+// Regex para detectar UUID en el pathname
+const UUID_REGEX = /^\/([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})$/i;
+
+function HomeContent() {
+  const searchParams = useSearchParams();
+  const pathname = usePathname();
+  
+  // Detectar deal_uuid desde query param (?deal_uuid=...) o desde el path (/uuid)
+  const dealUuidFromQuery = searchParams.get('deal_uuid')?.trim() ?? null;
+  const pathMatch = pathname.match(UUID_REGEX);
+  const dealUuidFromPath = pathMatch ? pathMatch[1] : null;
+  const dealUuid = dealUuidFromQuery || dealUuidFromPath;
+  
+  // Soporte para nid directo (?nid=...) — permite consultar BigQuery sin depender de HubSpot
+  // Uso: http://localhost:3000?nid=46452147125 (para desarrollo/testing)
+  const directNid = searchParams.get('nid')?.trim() ?? null;
+
   const [isLoading, setIsLoading] = useState(true);
+  const [hubspotLoading, setHubspotLoading] = useState(!!dealUuid);
+  const [hubspotFailed, setHubspotFailed] = useState(false);
+  const [bnplPrices, setBnplPrices] = useState<HubSpotProperties | null>(null);
   const [showStickyPrice, setShowStickyPrice] = useState(true);
   // Sección activa: 'property' (imagen), 'comparables' (mapa), 'configurator' (imagen config), 'payment' (imagen cuotas), 'donation' (videos), 'other' (fondo neutro)
   const [activeSection, setActiveSection] = useState<'property' | 'comparables' | 'configurator' | 'payment' | 'donation' | 'other'>('property');
@@ -70,17 +94,100 @@ export default function Home() {
   const [comparables, setComparables] = useState<Comparable[]>([]);
   const [selectedComparable, setSelectedComparable] = useState<Comparable | null>(null);
   
+  // Datos de costos HESH (desglose real)
+  const [costBreakdown, setCostBreakdown] = useState<HeshCostBreakdown | null>(null);
+  
   // Configuración de la oferta
+  // tramites/remodelacion default 'habi' = Habi se encarga (secciones de toggle deshabilitadas por ahora)
   const [configuration, setConfiguration] = useState<HabiConfiguration>({
-    tramites: 'cliente',
-    remodelacion: 'cliente',
+    tramites: 'habi',
+    remodelacion: 'habi',
     formaPago: '9cuotas'
   });
+
+  // Mapear tipo_inmueble_id a nombre legible
+  const getTipoInmueble = (tipoId: string | null | undefined): string => {
+    if (!tipoId) return DEFAULT_PROPERTY_DATA.tipoInmueble;
+    const tipos: Record<string, string> = {
+      '1': 'Apartamento',
+      '2': 'Casa',
+      '3': 'Oficina',
+      '4': 'Local',
+      '5': 'Lote',
+      '6': 'Finca',
+      '7': 'Bodega',
+    };
+    return tipos[tipoId] || tipoId;
+  };
+
+  // Datos dinámicos basados en HubSpot (con fallback a datos por defecto)
+  const PROPERTY_DATA = {
+    ...DEFAULT_PROPERTY_DATA,
+    valorMercado: bnplPrices
+      ? (Number(bnplPrices.bnpl9 || 0) > 0
+        ? Number(bnplPrices.bnpl9)
+        : Number(bnplPrices.precio_comite || DEFAULT_PROPERTY_DATA.valorMercado))
+      : DEFAULT_PROPERTY_DATA.valorMercado,
+    conjunto: bnplPrices?.nombre_del_conjunto || DEFAULT_PROPERTY_DATA.conjunto,
+    area: bnplPrices?.area_construida ? `${bnplPrices.area_construida} m²` : DEFAULT_PROPERTY_DATA.area,
+    direccion: bnplPrices?.direccion || DEFAULT_PROPERTY_DATA.direccion,
+    habitaciones: bnplPrices?.numero_habitaciones ? Number(bnplPrices.numero_habitaciones) : DEFAULT_PROPERTY_DATA.habitaciones,
+    banos: bnplPrices?.numero_de_banos ? Number(bnplPrices.numero_de_banos) : DEFAULT_PROPERTY_DATA.banos,
+    tipoInmueble: getTipoInmueble(bnplPrices?.tipo_inmueble_id),
+  };
 
   // Estados para modalidad de venta
   const [modalidadVenta, setModalidadVenta] = useState<'habi' | 'inmobiliaria' | 'cuenta_propia'>('habi');
   const [precioInmobiliaria, setPrecioInmobiliaria] = useState(PROPERTY_DATA.valorMercado);
   const [precioCuentaPropia, setPrecioCuentaPropia] = useState(PROPERTY_DATA.valorMercado);
+
+  // Cargar datos de HubSpot si hay deal_uuid
+  useEffect(() => {
+    if (!dealUuid) {
+      setHubspotLoading(false);
+      return;
+    }
+
+    const loadHubSpotData = async () => {
+      setHubspotLoading(true);
+      const data = await getHubSpotProperties(dealUuid);
+      if (data) {
+        setBnplPrices(data);
+        // Actualizar precios basados en HubSpot
+        const bnpl9Num = Number(data.bnpl9 || 0);
+        const valorMercado = bnpl9Num > 0 ? bnpl9Num : Number(data.precio_comite || DEFAULT_PROPERTY_DATA.valorMercado);
+        setPrecioInmobiliaria(valorMercado);
+        setPrecioCuentaPropia(valorMercado);
+      } else {
+        // HubSpot falló o no devolvió datos → usar fallback estático para comparables
+        setHubspotFailed(true);
+      }
+      setHubspotLoading(false);
+    };
+
+    loadHubSpotData();
+
+    // Timeout de seguridad (15 segundos)
+    const timeout = setTimeout(() => {
+      setHubspotLoading(false);
+    }, 15000);
+
+    return () => clearTimeout(timeout);
+  }, [dealUuid]);
+
+  // Ajustar formaPago a 'contado' si BNPL no está disponible
+  useEffect(() => {
+    if (!bnplPrices) return;
+    
+    // Verificar si BNPL está disponible
+    const negocioAplicaBnpl = bnplPrices.negocio_aplica_para_bnpl?.toLowerCase().trim();
+    const hasBnpl = negocioAplicaBnpl && !['no', 'false', 'null'].includes(negocioAplicaBnpl);
+    
+    // Si BNPL no está disponible y formaPago no es 'contado', cambiar a 'contado'
+    if (!hasBnpl && configuration.formaPago !== 'contado') {
+      setConfiguration(prev => ({ ...prev, formaPago: 'contado' }));
+    }
+  }, [bnplPrices, configuration.formaPago]);
 
   // Estado de donación
   const [selectedDonation, setSelectedDonation] = useState('');
@@ -88,12 +195,10 @@ export default function Home() {
 
   // Estado para carrusel de videos en móvil
   const [currentVideoIndex, setCurrentVideoIndex] = useState(0);
-  const DONATION_VIDEOS = [
-    '/DJI_20251210101636_0086_D.webm',
-    '/DJI_20251210171250_0012_D.webm',
-    '/DJI_20251210221910_0517_D.webm',
-    '/DJI_20251210222059_0518_D.webm'
-  ];
+  
+  // Cargar configuración de secciones
+  const landingConfig = sectionsConfig as LandingConfig;
+  const DONATION_VIDEOS = landingConfig.donationVideos;
 
   // Ref para el panel derecho en desktop
   const rightColumnRef = useRef<HTMLDivElement | null>(null);
@@ -109,9 +214,44 @@ export default function Home() {
     }
   };
 
-  // Cargar datos del mapa
+  // Cargar datos del mapa y comparables
+  // Cuando hay nid de HubSpot, usa BigQuery; sino usa los JSONs estáticos como fallback
   useEffect(() => {
-    const loadData = async () => {
+    const loadFromBigQuery = async (nid: string) => {
+      try {
+        // Cargar comparables y HESH en paralelo
+        const [comparablesRes, heshRes] = await Promise.all([
+          fetch(`/api/comparables?nid=${nid}`),
+          fetch(`/api/hesh?nid=${nid}`),
+        ]);
+        
+        if (!comparablesRes.ok) throw new Error(`BQ comparables API error: ${comparablesRes.status}`);
+        const data = await comparablesRes.json();
+        
+        if (data.inmueble) {
+          setInmueble(data.inmueble);
+        }
+        
+        if (data.comparables && data.comparables.length > 0) {
+          setComparables(data.comparables);
+        }
+        
+        // Cargar HESH cost breakdown
+        if (heshRes.ok) {
+          const heshData = await heshRes.json();
+          if (heshData.costBreakdown) {
+            setCostBreakdown(heshData.costBreakdown);
+          }
+        }
+        
+        setTimeout(() => setIsLoading(false), 800);
+      } catch (error) {
+        console.error('Error loading from BigQuery, falling back to static:', error);
+        await loadFromStatic();
+      }
+    };
+    
+    const loadFromStatic = async () => {
       try {
         const [inmuebleRes, comparablesRes] = await Promise.all([
           fetch('/inmueble.json'),
@@ -126,10 +266,9 @@ export default function Home() {
         const keys = Object.keys(comparablesData.nid);
         const uniqueComparables = new Map<string, Comparable>();
         
-        keys.forEach((key) => {
+        keys.forEach((key: string) => {
           const nid = comparablesData.nid[key];
           if (!uniqueComparables.has(nid)) {
-            // Extraer habitaciones del campo features (ej: "52m² ・ 3 Hab. ・ 1 Baños ・ 0 Est.")
             const features = comparablesData.features[key] || '';
             const habMatch = features.match(/(\d+)\s*Hab/i);
             const habitaciones = habMatch ? habMatch[1] : '-';
@@ -157,22 +296,105 @@ export default function Home() {
         });
 
         setComparables(Array.from(uniqueComparables.values()));
-        
-        // Pequeño delay para asegurar que las imágenes empiecen a cargar
-        setTimeout(() => {
-          setIsLoading(false);
-        }, 800);
+        setTimeout(() => setIsLoading(false), 800);
       } catch (error) {
-        console.error('Error loading data:', error);
+        console.error('Error loading static data:', error);
         setIsLoading(false);
       }
     };
 
-    loadData();
-  }, []);
+    // Función para cargar HESH y Comparables para MX
+    const loadDataMX = async (nid: string) => {
+      console.log('[MX] Loading data for nid:', nid);
+      try {
+        // Cargar HESH y Comparables en paralelo
+        const [heshRes, comparablesRes] = await Promise.all([
+          fetch(`/api/hesh?nid=${nid}&country=MX`),
+          fetch(`/api/comparables?nid=${nid}&country=MX`)
+        ]);
+        
+        // Procesar HESH
+        if (heshRes.ok) {
+          const heshData = await heshRes.json();
+          console.log('[MX HESH] costBreakdown received:', heshData.costBreakdown ? 'yes' : 'no');
+          if (heshData.costBreakdown) {
+            setCostBreakdown(heshData.costBreakdown);
+          }
+        }
+        
+        // Procesar Comparables
+        if (comparablesRes.ok) {
+          const comparablesData = await comparablesRes.json();
+          console.log('[MX Comparables] count:', comparablesData.comparables?.length || 0);
+          if (comparablesData.comparables && comparablesData.comparables.length > 0) {
+            setComparables(comparablesData.comparables);
+          }
+          if (comparablesData.inmueble) {
+            setInmueble(comparablesData.inmueble);
+          }
+        }
+      } catch (error) {
+        console.error('Error loading MX data:', error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    const country = bnplPrices?.country ?? 'CO';
+    
+    // MX: cargar HESH y Comparables con queries específicas para México
+    if (country === 'MX') {
+      const nid = directNid || bnplPrices?.nid;
+      if (nid) {
+        loadDataMX(nid);
+      } else {
+        setCostBreakdown(null);
+        setComparables([]);
+        setInmueble(null);
+        setIsLoading(false);
+      }
+      return;
+    }
+
+    // CO: Prioridad: 1) nid directo por URL, 2) nid de HubSpot, 3) fallback estático
+    if (directNid) {
+      loadFromBigQuery(directNid);
+    } else if (bnplPrices?.nid) {
+      loadFromBigQuery(bnplPrices.nid);
+    } else if (!dealUuid || hubspotFailed) {
+      loadFromStatic();
+    }
+  }, [directNid, bnplPrices?.nid, bnplPrices?.country, dealUuid, hubspotFailed]);
 
   // Calcular precio según configuración
+  // Si hay datos de HubSpot, usar los valores BNPL directos; si no, calcular con fórmula
   const calculatePrice = () => {
+    if (bnplPrices) {
+      // Con datos de HubSpot: usar el valor BNPL correspondiente a la forma de pago seleccionada
+      const bnplMap: Record<string, string | undefined> = {
+        'contado': bnplPrices.precio_comite,
+        '3cuotas': bnplPrices.bnpl3,
+        '6cuotas': bnplPrices.bnpl6,
+        '9cuotas': bnplPrices.bnpl9,
+      };
+      const value = bnplMap[configuration.formaPago];
+      // Si el valor BNPL es 0 o no existe, usar precio_comite como fallback
+      const numValue = Number(value || 0);
+      let price = Math.round(numValue > 0 ? numValue : Number(bnplPrices.precio_comite || 0));
+      
+      // Si el usuario elige pagar trámites, sumar el costo real de trámites
+      if (configuration.tramites === 'cliente' && costBreakdown) {
+        price += Math.round(costBreakdown.tramites.total);
+      }
+      // Si el usuario elige hacer remodelaciones, sumar ese costo
+      if (configuration.remodelacion === 'cliente' && costBreakdown) {
+        price += Math.round(costBreakdown.remodelacion.total);
+      }
+      
+      return price;
+    }
+
+    // Sin datos de HubSpot: calcular con fórmula
     const { valorMercado } = PROPERTY_DATA;
     let precioBase = valorMercado * 0.782;
 
@@ -369,12 +591,37 @@ export default function Home() {
   // Altura del header en móvil (AnnouncementBar + Navbar)
   const mobileHeaderHeight = 90;
 
-  // Loading screen
-  if (isLoading) {
+  // Loading screen (datos del mapa o HubSpot)
+  if (isLoading || hubspotLoading) {
     return (
       <div className="min-h-screen bg-white flex items-center justify-center">
         <div className="flex flex-col items-center gap-4">
           <div className="w-10 h-10 border-4 border-purple-200 border-t-purple-600 rounded-full animate-spin" />
+          {hubspotLoading && (
+            <p className="text-sm text-gray-500">Cargando tu propuesta personalizada...</p>
+          )}
+        </div>
+      </div>
+    );
+  }
+
+  // Si no hay deal_uuid, mostrar pantalla de acceso no válido
+  if (!dealUuid) {
+    return (
+      <div className="min-h-screen bg-white flex items-center justify-center px-4">
+        <div className="text-center max-w-md">
+          <div className="mb-6">
+            <svg className="w-24 h-24 mx-auto text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+            </svg>
+          </div>
+          <h1 className="text-2xl font-bold text-gray-800 mb-4">Acceso no válido</h1>
+          <p className="text-gray-600 mb-6">
+            Para acceder a tu propuesta personalizada, necesitas un enlace único proporcionado por tu asesor de Habi.
+          </p>
+          <p className="text-sm text-gray-500">
+            Si tienes un enlace, por favor úsalo para acceder a tu propuesta de compra.
+          </p>
         </div>
       </div>
     );
@@ -385,7 +632,7 @@ export default function Home() {
       {/* Header sticky - AnnouncementBar + Navbar */}
       <div className="sticky top-0 z-50">
         <AnnouncementBar fechaExpiracion={PROPERTY_DATA.fechaExpiracion} />
-        <Navbar />
+        <Navbar activeCountry={bnplPrices?.country ?? 'CO'} />
       </div>
 
       {/* === LAYOUT MÓVIL === */}
@@ -540,7 +787,8 @@ export default function Home() {
 
         {/* Configurador scrolleable en móvil */}
         <div className="flex-1 bg-white pb-24">
-          <ConfiguratorRight
+          <SectionRenderer
+            sections={landingConfig.sections}
             configuration={configuration}
             setConfiguration={setConfiguration}
             currentPrice={currentPrice}
@@ -569,6 +817,9 @@ export default function Home() {
             comparables={comparables}
             selectedComparable={selectedComparable}
             onSelectComparable={setSelectedComparable}
+            bnplPrices={bnplPrices}
+            whatsappAsesor={bnplPrices?.whatsapp_asesor}
+            costBreakdown={costBreakdown}
           />
         </div>
       </div>
@@ -714,7 +965,8 @@ export default function Home() {
           ref={setRightColumnRef}
           className="w-[480px] overflow-y-auto max-h-[calc(100vh-90px)] bg-white relative flex-shrink-0 pb-24"
         >
-          <ConfiguratorRight
+          <SectionRenderer
+            sections={landingConfig.sections}
             configuration={configuration}
             setConfiguration={setConfiguration}
             currentPrice={currentPrice}
@@ -743,6 +995,9 @@ export default function Home() {
             comparables={comparables}
             selectedComparable={selectedComparable}
             onSelectComparable={setSelectedComparable}
+            bnplPrices={bnplPrices}
+            whatsappAsesor={bnplPrices?.whatsapp_asesor}
+            costBreakdown={costBreakdown}
           />
         </div>
       </div>
@@ -756,10 +1011,29 @@ export default function Home() {
         precioCuentaPropia={precioCuentaPropia}
         donationAmount={donationAmount}
         onHabiClick={() => setModalidadVenta('habi')}
+        evaluacionInmueble={costBreakdown ? Math.round(costBreakdown.askPrice) : undefined}
       />
 
       {/* Asistente de IA flotante */}
-      <AIAssistant />
+      {landingConfig.showChatbot !== false && <AIAssistant />}
     </main>
+  );
+}
+
+function LoadingFallback() {
+  return (
+    <div className="min-h-screen bg-white flex items-center justify-center">
+      <div className="flex flex-col items-center gap-4">
+        <div className="w-10 h-10 border-4 border-purple-200 border-t-purple-600 rounded-full animate-spin" />
+      </div>
+    </div>
+  );
+}
+
+export default function Home() {
+  return (
+    <Suspense fallback={<LoadingFallback />}>
+      <HomeContent />
+    </Suspense>
   );
 }

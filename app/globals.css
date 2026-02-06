@@ -1,5 +1,9 @@
 @import "tailwindcss";
 
+/* Calculator & comparison styles - importados después de Tailwind para asegurar prioridad */
+@import "./habi/components/calculator/calculator.css";
+@import "./habi/components/calculator/habi-comparison.css";
+
 * {
   box-sizing: border-box;
 }

@@ -2,20 +2,41 @@
 
 import Image from 'next/image';
 
-const WHATSAPP_NUMBER = '3043342330';
-const WHATSAPP_MESSAGE = 'Hola, me interesa vender mi inmueble con Habi. ¿Pueden asesorarme?';
+// Número por defecto de soporte Habi Colombia (no usar número personal)
+const DEFAULT_WHATSAPP_NUMBER = '';
+const DEFAULT_WHATSAPP_MESSAGE = 'Hola, me interesa vender mi inmueble con Habi. ¿Pueden asesorarme?';
 
-// Datos del asesor (en producción vendrían del backend)
-const ADVISOR = {
-  name: 'Carolina Mendoza',
-  role: 'Asesora comercial',
+// Datos por defecto del asesor
+const DEFAULT_ADVISOR = {
+  name: 'Tu asesor Habi',
+  role: 'Asesor comercial',
   photo: '/c1219d8b-ebe3-49a5-ac2a-49c6ab71d437.png'
 };
 
-export default function PersonalAdvisor() {
+interface PersonalAdvisorProps {
+  whatsappAsesor?: string;
+}
+
+export default function PersonalAdvisor({ whatsappAsesor }: PersonalAdvisorProps) {
+  const advisorName = DEFAULT_ADVISOR.name;
+
   const handleWhatsAppClick = () => {
-    const encodedMessage = encodeURIComponent(WHATSAPP_MESSAGE);
-    window.open(`https://wa.me/57${WHATSAPP_NUMBER}?text=${encodedMessage}`, '_blank');
+    if (whatsappAsesor) {
+      // Si ya es una URL completa de WhatsApp, usarla directamente
+      if (whatsappAsesor.startsWith('http')) {
+        window.open(whatsappAsesor, '_blank');
+      } else {
+        // Si es solo un número, construir la URL
+        const cleanNumber = whatsappAsesor.replace(/[^\d+]/g, '');
+        const encodedMessage = encodeURIComponent(DEFAULT_WHATSAPP_MESSAGE);
+        window.open(`https://wa.me/${cleanNumber.replace('+', '')}?text=${encodedMessage}`, '_blank');
+      }
+    } else if (DEFAULT_WHATSAPP_NUMBER) {
+      // Fallback al número por defecto (solo si está configurado)
+      const encodedMessage = encodeURIComponent(DEFAULT_WHATSAPP_MESSAGE);
+      window.open(`https://wa.me/57${DEFAULT_WHATSAPP_NUMBER}?text=${encodedMessage}`, '_blank');
+    }
+    // Si no hay whatsappAsesor ni DEFAULT_WHATSAPP_NUMBER, no hacer nada
   };
 
   return (
@@ -26,8 +47,8 @@ export default function PersonalAdvisor() {
         {/* Foto del asesor */}
         <div className="relative w-16 h-16 rounded-full overflow-hidden flex-shrink-0 border-2 border-gray-100">
           <Image
-            src={ADVISOR.photo}
-            alt={ADVISOR.name}
+            src={DEFAULT_ADVISOR.photo}
+            alt={advisorName}
             fill
             className="object-cover"
           />
@@ -35,8 +56,8 @@ export default function PersonalAdvisor() {
 
         {/* Info */}
         <div className="flex-1 min-w-0">
-          <h3 className="font-semibold text-gray-900">{ADVISOR.name}</h3>
-          <p className="text-sm text-gray-500">{ADVISOR.role}</p>
+          <h3 className="font-semibold text-gray-900">{advisorName}</h3>
+          <p className="text-sm text-gray-500">{DEFAULT_ADVISOR.role}</p>
         </div>
 
         {/* Botón WhatsApp */}

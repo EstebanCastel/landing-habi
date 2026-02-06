@@ -1,8 +1,7 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
-import './calculator.css';
-import './habi-comparison.css';
+import React, { useState, useEffect, useRef } from 'react';
+// CSS importado globalmente desde globals.css para asegurar prioridad sobre Tailwind
 
 // Custom HelpIcon component
 const HelpIcon = ({ title }: { title: string }) => {
@@ -22,16 +21,269 @@ const HelpIcon = ({ title }: { title: string }) => {
   );
 };
 
+// Componente de comparación Habi vs Mercado (gráfica mes a mes)
+interface HabiVsMarketComparisonProps {
+  propertyValue: number;
+  totalExpenses: number;
+  netAmount: number;
+  habiOffer: number;
+}
+
+function HabiVsMarketComparison({ propertyValue, totalExpenses, netAmount, habiOffer }: HabiVsMarketComparisonProps) {
+  const [progress, setProgress] = useState(1);
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
+
+  const months = 9;
+  const habiPerMonth = (habiOffer / 1000000) / months;
+  const totalExpensesPerMonth = (totalExpenses / months) / 1000000;
+  const marketNetAmount = netAmount / 1000000;
+
+  const habiTotal = progress * habiPerMonth;
+  const marketTotal = progress === 9 ? marketNetAmount : -(progress * totalExpensesPerMonth);
+
+  const formatCurrency = (value: number) => {
+    return new Intl.NumberFormat('es-CO', {
+      style: 'currency',
+      currency: 'COP',
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 0
+    }).format(value * 1000000);
+  };
+
+  // Scroll handler para controlar el progreso
+  useEffect(() => {
+    if (!scrollContainerRef.current) return;
+
+    const container = scrollContainerRef.current;
+    const handleScroll = () => {
+      const rect = container.getBoundingClientRect();
+      const viewportHeight = window.innerHeight;
+      const containerTop = rect.top;
+      const containerHeight = rect.height;
+      
+      // Calcular progreso basado en cuánto se ha scrolleado
+      const scrollProgress = Math.max(0, Math.min(1, 
+        (viewportHeight - containerTop) / (containerHeight + viewportHeight)
+      ));
+      
+      const newProgress = Math.ceil(scrollProgress * 9);
+      setProgress(Math.max(1, Math.min(9, newProgress)));
+    };
+
+    window.addEventListener('scroll', handleScroll, { passive: true });
+    handleScroll(); // Initial call
+
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
+
+  return (
+    <div ref={scrollContainerRef} className="mt-8 py-8 bg-gradient-to-b from-white via-purple-50 to-purple-100 rounded-2xl">
+      <div className="px-6">
+        {/* Header */}
+        <div className="text-center mb-8">
+          <h3 className="text-2xl font-bold text-purple-700 mb-2">Habi vs Mercado Tradicional</h3>
+          <p className="text-gray-600">Compara cómo evolucionan tus ingresos mes a mes</p>
+        </div>
+
+        {/* Comparación Card */}
+        <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-6 mb-6">
+          {/* Layout: Mes + Cards */}
+          <div className="flex flex-col md:flex-row gap-6 items-start">
+            {/* Mes */}
+            <div className="text-center md:text-left">
+              <p className="text-xs uppercase tracking-widest text-gray-400 mb-1 font-semibold">Mes</p>
+              <p className="text-6xl md:text-8xl font-black text-purple-700">{progress}</p>
+            </div>
+
+            {/* Cards */}
+            <div className="flex-1 grid grid-cols-2 gap-4 w-full">
+              {/* Habi */}
+              <div className="text-center space-y-2">
+                <p className="text-xs uppercase tracking-widest font-bold text-purple-700">Habi</p>
+                <div className="py-2">
+                  <img src="/habilogo.jpg" alt="Habi" className="w-12 h-12 mx-auto rounded-lg object-contain" />
+                </div>
+                <p className="text-2xl md:text-4xl font-black text-purple-700">
+                  ${habiTotal.toFixed(1)}M
+                </p>
+                <p className="text-xs text-gray-600">
+                  {progress === 9 ? 'Recibes tu última cuota fija' : 'Recibes tu cuota fija'}
+                </p>
+              </div>
+
+              {/* Mercado */}
+              <div className="text-center space-y-2">
+                <p className="text-xs uppercase tracking-widest font-bold text-gray-700">Mercado tradicional</p>
+                <div className="py-2">
+                  <div className="w-12 h-12 mx-auto bg-gray-100 rounded-lg flex items-center justify-center">
+                    <svg className="w-6 h-6 text-gray-500" fill="currentColor" viewBox="0 0 20 20">
+                      <path d="M10.707 2.293a1 1 0 00-1.414 0l-7 7a1 1 0 001.414 1.414L4 10.414V17a1 1 0 001 1h2a1 1 0 001-1v-2a1 1 0 011-1h2a1 1 0 011 1v2a1 1 0 001 1h2a1 1 0 001-1v-6.586l.293.293a1 1 0 001.414-1.414l-7-7z" />
+                    </svg>
+                  </div>
+                </div>
+                <p className={`text-2xl md:text-4xl font-black ${marketTotal >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                  ${marketTotal.toFixed(1)}M
+                </p>
+                <p className="text-xs text-gray-600">
+                  {progress === 9 
+                    ? `Recibes ${formatCurrency(marketNetAmount)} después de gastos`
+                    : progress === 6 
+                    ? '¡Consigues comprador!'
+                    : 'Pagas gastos del inmueble'
+                  }
+                </p>
+              </div>
+            </div>
+          </div>
+
+          {/* Gráfica */}
+          <div className="mt-8 pt-6 border-t border-gray-200">
+            <div className="flex items-center justify-between mb-4">
+              <p className="text-xs uppercase tracking-widest text-gray-400 font-semibold">Evolución financiera</p>
+              <div className="flex gap-4">
+                <div className="flex items-center gap-2">
+                  <div className="w-3 h-3 rounded-full bg-purple-600"></div>
+                  <span className="text-xs font-semibold text-gray-700">Habi</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <div className="w-3 h-3 rounded-full bg-red-500"></div>
+                  <span className="text-xs font-semibold text-gray-700">Mercado</span>
+                </div>
+              </div>
+            </div>
+
+            <svg viewBox="0 0 900 300" className="w-full h-auto" preserveAspectRatio="xMidYMid meet">
+              <defs>
+                <linearGradient id="habiGradient" x1="0%" y1="0%" x2="0%" y2="100%">
+                  <stop offset="0%" style={{ stopColor: "#7C3AED", stopOpacity: 0.2 }} />
+                  <stop offset="100%" style={{ stopColor: "#7C3AED", stopOpacity: 0.02 }} />
+                </linearGradient>
+              </defs>
+
+              {/* Grid */}
+              <line x1="80" y1="60" x2="840" y2="60" stroke="#F1F5F9" strokeWidth="1" />
+              <line x1="80" y1="120" x2="840" y2="120" stroke="#F1F5F9" strokeWidth="1" />
+              <line x1="80" y1="180" x2="840" y2="180" stroke="#F1F5F9" strokeWidth="1" />
+              <line x1="80" y1="240" x2="840" y2="240" stroke="#94A3B8" strokeWidth="2" />
+
+              {/* Labels Y */}
+              <text x="65" y="65" textAnchor="end" fontSize="11" fill="#64748B" fontWeight="600">${marketNetAmount.toFixed(0)}M</text>
+              <text x="65" y="125" textAnchor="end" fontSize="11" fill="#64748B" fontWeight="600">${(marketNetAmount * 0.66).toFixed(0)}M</text>
+              <text x="65" y="185" textAnchor="end" fontSize="11" fill="#64748B" fontWeight="600">${(marketNetAmount * 0.33).toFixed(0)}M</text>
+              <text x="65" y="245" textAnchor="end" fontSize="11" fill="#64748B" fontWeight="700">$0</text>
+
+              {/* Labels X (Meses) */}
+              {[...Array(9)].map((_, i) => {
+                const x = 80 + ((i + 1) * (760 / 9));
+                return (
+                  <text key={`month-${i}`} x={x} y="270" textAnchor="middle" fontSize="12" fill="#475569" fontWeight="600">
+                    M{i + 1}
+                  </text>
+                );
+              })}
+
+              {/* Área Habi */}
+              {progress > 0 && (
+                <polygon
+                  points={`80,240 ${[...Array(Math.min(progress, 9))].map((_, i) => {
+                    const month = i + 1;
+                    const x = 80 + (month * (760 / 9));
+                    const value = month * habiPerMonth;
+                    const y = 240 - (value / marketNetAmount) * 180;
+                    return `${x},${y}`;
+                  }).join(' ')} ${80 + (Math.min(progress, 9) * (760 / 9))},240`}
+                  fill="url(#habiGradient)"
+                />
+              )}
+
+              {/* Línea Habi */}
+              {progress > 0 && (
+                <polyline
+                  points={[...Array(Math.min(progress, 9))].map((_, i) => {
+                    const month = i + 1;
+                    const x = 80 + (month * (760 / 9));
+                    const value = month * habiPerMonth;
+                    const y = 240 - (value / marketNetAmount) * 180;
+                    return `${x},${y}`;
+                  }).join(' ')}
+                  fill="none"
+                  stroke="#7C3AED"
+                  strokeWidth="3"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
+              )}
+
+              {/* Línea Mercado (roja en 0 hasta mes 8, luego sube a verde) */}
+              {progress > 0 && progress < 9 && (
+                <line x1="80" y1="240" x2={80 + (Math.min(progress, 8) * (760 / 9))} y2="240" 
+                  stroke="#DC2626" strokeWidth="3" strokeDasharray="8 4" />
+              )}
+              {progress === 9 && (
+                <>
+                  <line x1="80" y1="240" x2={80 + (8 * (760 / 9))} y2="240" 
+                    stroke="#DC2626" strokeWidth="3" strokeDasharray="8 4" />
+                  <line x1={80 + (8 * (760 / 9))} y1="240" x2={80 + (9 * (760 / 9))} y2="60" 
+                    stroke="#16A34A" strokeWidth="3" />
+                </>
+              )}
+
+              {/* Puntos Habi */}
+              {[...Array(Math.min(progress, 9))].map((_, i) => {
+                const month = i + 1;
+                const x = 80 + (month * (760 / 9));
+                const value = month * habiPerMonth;
+                const y = 240 - (value / marketNetAmount) * 180;
+                const isCurrentMonth = month === progress;
+                return (
+                  <g key={`habi-${i}`}>
+                    <circle cx={x} cy={y} r={isCurrentMonth ? 6 : 4} fill="white" stroke="#7C3AED" strokeWidth="2" />
+                    <circle cx={x} cy={y} r={isCurrentMonth ? 3 : 2} fill="#7C3AED" />
+                  </g>
+                );
+              })}
+
+              {/* Punto final mercado (mes 9) */}
+              {progress === 9 && (
+                <g>
+                  <circle cx={80 + (9 * (760 / 9))} cy={60} r={6} fill="white" stroke="#16A34A" strokeWidth="2" />
+                  <circle cx={80 + (9 * (760 / 9))} cy={60} r={3} fill="#16A34A" />
+                </g>
+              )}
+            </svg>
+
+            <p className="text-xs text-gray-500 mt-4 italic text-center">
+              * Gráfica ilustrativa. Los valores reales pueden variar según las condiciones de cada transacción.
+            </p>
+          </div>
+        </div>
+
+        {/* Scroll indicator */}
+        <div className="text-center">
+          <p className="text-sm text-gray-500">
+            {progress < 9 ? '↓ Sigue scrolleando para ver la evolución' : '✓ Comparación completa'}
+          </p>
+        </div>
+      </div>
+
+      {/* Scroll area para controlar la animación */}
+      <div className="h-[300vh]" />
+    </div>
+  );
+}
+
 interface ExpenseCalculatorProps {
   initialPropertyValue?: number;
   initialAdministration?: number;
   habiOfferValue?: number;
+  bnpl9Value?: number; // Para mostrar la gráfica de comparación solo si hay BNPL
 }
 
 export default function ExpenseCalculator({ 
   initialPropertyValue = 0,
   initialAdministration = 0,
-  habiOfferValue = 0
+  habiOfferValue = 0,
+  bnpl9Value = 0
 }: ExpenseCalculatorProps) {
   const [propertyValue, setPropertyValue] = useState(initialPropertyValue > 0 ? initialPropertyValue.toString() : "");
   const [administrationValue, setAdministrationValue] = useState(initialAdministration > 0 ? initialAdministration.toString() : "");
@@ -796,6 +1048,16 @@ export default function ExpenseCalculator({
             </div>
           </div>
         </div>
+      )}
+
+      {/* Sección de Comparación Habi vs Mercado - Solo si hay BNPL disponible */}
+      {showResults && bnpl9Value > 0 && results && (
+        <HabiVsMarketComparison 
+          propertyValue={results.propertyValue}
+          totalExpenses={results.totalExpenses}
+          netAmount={results.netAmount}
+          habiOffer={bnpl9Value}
+        />
       )}
     </div>
   );

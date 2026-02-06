@@ -10,6 +10,7 @@ interface SaleModalityProps {
   modalidadVenta: Modalidad;
   setModalidadVenta: (modalidad: Modalidad) => void;
   onSectionRef?: (ref: HTMLDivElement | null) => void;
+  availableModalities?: Modalidad[]; // Permite configurar cuáles modalidades mostrar
 }
 
 const TABS = [
@@ -335,14 +336,26 @@ function GalleryDual({ images }: { images: string[] }) {
   );
 }
 
-export default function SaleModality({ modalidadVenta, setModalidadVenta, onSectionRef }: SaleModalityProps) {
+export default function SaleModality({ modalidadVenta, setModalidadVenta, onSectionRef, availableModalities }: SaleModalityProps) {
   const [showModal, setShowModal] = useState(false);
   const [modalView, setModalView] = useState<ModalView>('features');
   const [modalTab, setModalTab] = useState<Modalidad>(modalidadVenta);
   const modalContentRef = useRef<HTMLDivElement>(null);
   const sectionRef = useRef<HTMLDivElement>(null);
   
-  const selectedTab = TABS.find(tab => tab.id === modalidadVenta);
+  // Filtrar tabs según availableModalities (si se proporciona)
+  const filteredTabs = availableModalities 
+    ? TABS.filter(tab => availableModalities.includes(tab.id))
+    : TABS;
+  
+  const filteredComparisonOptions = availableModalities
+    ? COMPARISON_OPTIONS.filter(opt => availableModalities.includes(opt.id))
+    : COMPARISON_OPTIONS;
+  
+  // Filtrar modalidades para el modal
+  const availableModalitiesForModal = availableModalities || (['habi', 'inmobiliaria', 'cuenta_propia'] as Modalidad[]);
+  
+  const selectedTab = filteredTabs.find(tab => tab.id === modalidadVenta);
   const modalContent = MODAL_CONTENT[modalTab];
 
   // Reportar la ref al padre
@@ -375,7 +388,7 @@ export default function SaleModality({ modalidadVenta, setModalidadVenta, onSect
     <div ref={sectionRef} id="sale-modality-section" className="bg-white">
       {/* Tabs de margen a margen */}
       <div className="flex border-b border-gray-200">
-        {TABS.map((tab) => (
+        {filteredTabs.map((tab) => (
           <button
             key={tab.id}
             onClick={() => setModalidadVenta(tab.id)}
@@ -453,7 +466,7 @@ export default function SaleModality({ modalidadVenta, setModalidadVenta, onSect
 
               {/* Tabs estilo Tesla */}
               <div className="flex bg-gray-100 rounded-lg p-1">
-                {(['habi', 'inmobiliaria', 'cuenta_propia'] as Modalidad[]).map((tab) => (
+                {availableModalitiesForModal.map((tab) => (
                   <button
                     key={tab}
                     onClick={() => handleChangeTab(tab)}
@@ -485,9 +498,9 @@ export default function SaleModality({ modalidadVenta, setModalidadVenta, onSect
 
               {/* Header de columnas - responsive */}
               {/* Desktop: grid horizontal */}
-              <div className="hidden md:grid grid-cols-4 gap-4">
+              <div className={`hidden md:grid gap-4`} style={{ gridTemplateColumns: `1fr repeat(${filteredComparisonOptions.length}, 1fr)` }}>
                 <div></div>
-                {COMPARISON_OPTIONS.map((option) => (
+                {filteredComparisonOptions.map((option) => (
                   <div 
                     key={option.id}
                     className={`text-center p-4 rounded-xl ${
@@ -509,8 +522,8 @@ export default function SaleModality({ modalidadVenta, setModalidadVenta, onSect
               </div>
 
               {/* Mobile: cards en grid */}
-              <div className="md:hidden grid grid-cols-3 gap-2">
-                {COMPARISON_OPTIONS.map((option) => (
+              <div className={`md:hidden grid gap-2`} style={{ gridTemplateColumns: `repeat(${filteredComparisonOptions.length}, 1fr)` }}>
+                {filteredComparisonOptions.map((option) => (
                   <button
                     key={option.id}
                     onClick={() => handleSelectOption(option.id)}
@@ -628,11 +641,12 @@ export default function SaleModality({ modalidadVenta, setModalidadVenta, onSect
                 );
               })}
 
-              {/* Sección Explorar otras opciones */}
+              {/* Sección Explorar otras opciones - solo si hay más de 1 modalidad */}
+              {availableModalitiesForModal.length > 1 && (
               <div className="pt-8 border-t border-gray-200 mx-6">
                 <h3 className="text-2xl font-bold text-gray-900 mb-6">Explora otras opciones</h3>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {(['habi', 'inmobiliaria', 'cuenta_propia'] as Modalidad[])
+                  {availableModalitiesForModal
                     .filter(opt => opt !== modalTab)
                     .map((opt) => {
                       const content = MODAL_CONTENT[opt];
@@ -670,6 +684,7 @@ export default function SaleModality({ modalidadVenta, setModalidadVenta, onSect
                     })}
                 </div>
               </div>
+              )}
 
               {/* Disclaimer y botón */}
               <div className="pt-6 space-y-4 mx-6">
@@ -700,12 +715,13 @@ export default function SaleModality({ modalidadVenta, setModalidadVenta, onSect
                       {category.features.map((feature, idx) => (
                         <div 
                           key={feature.name}
-                          className={`grid grid-cols-4 gap-4 py-4 ${
+                          className={`grid gap-4 py-4 ${
                             idx < category.features.length - 1 ? 'border-b border-gray-100' : ''
                           }`}
+                          style={{ gridTemplateColumns: `1fr repeat(${availableModalitiesForModal.length}, 1fr)` }}
                         >
                           <div className="text-sm text-gray-600">{feature.name}</div>
-                          {(['habi', 'inmobiliaria', 'cuenta_propia'] as Modalidad[]).map((optId) => (
+                          {availableModalitiesForModal.map((optId) => (
                             <div 
                               key={optId}
                               className={`text-center text-sm ${
@@ -724,14 +740,19 @@ export default function SaleModality({ modalidadVenta, setModalidadVenta, onSect
                 ))}
               </div>
 
-              {/* Tabla de comparación - Móvil: muestra las 3 opciones */}
+              {/* Tabla de comparación - Móvil: muestra las opciones disponibles */}
               <div className="md:hidden space-y-4">
                 {/* Header de columnas en móvil */}
-                <div className="grid grid-cols-4 gap-1 text-center text-[10px]">
+                <div className="grid gap-1 text-center text-[10px]" style={{ gridTemplateColumns: `1fr repeat(${availableModalitiesForModal.length}, 1fr)` }}>
                   <div></div>
-                  <div className={`py-1 rounded ${modalidadVenta === 'habi' ? 'bg-purple-100 text-purple-700 font-medium' : 'text-gray-500'}`}>Habi</div>
-                  <div className={`py-1 rounded ${modalidadVenta === 'inmobiliaria' ? 'bg-purple-100 text-purple-700 font-medium' : 'text-gray-500'}`}>Inmob.</div>
-                  <div className={`py-1 rounded ${modalidadVenta === 'cuenta_propia' ? 'bg-purple-100 text-purple-700 font-medium' : 'text-gray-500'}`}>Propia</div>
+                  {availableModalitiesForModal.map((modality) => (
+                    <div 
+                      key={modality}
+                      className={`py-1 rounded ${modalidadVenta === modality ? 'bg-purple-100 text-purple-700 font-medium' : 'text-gray-500'}`}
+                    >
+                      {modality === 'habi' ? 'Habi' : modality === 'inmobiliaria' ? 'Inmob.' : 'Propia'}
+                    </div>
+                  ))}
                 </div>
                 
                 {COMPARISON_ROWS.map((category) => (
@@ -741,10 +762,11 @@ export default function SaleModality({ modalidadVenta, setModalidadVenta, onSect
                       {category.features.map((feature) => (
                         <div 
                           key={feature.name}
-                          className="grid grid-cols-4 gap-1 py-1.5 border-b border-gray-100 last:border-0 items-center"
+                          className="grid gap-1 py-1.5 border-b border-gray-100 last:border-0 items-center"
+                          style={{ gridTemplateColumns: `1fr repeat(${availableModalitiesForModal.length}, 1fr)` }}
                         >
                           <span className="text-[11px] text-gray-600">{feature.name}</span>
-                          {(['habi', 'inmobiliaria', 'cuenta_propia'] as Modalidad[]).map((optId) => (
+                          {availableModalitiesForModal.map((optId) => (
                             <span 
                               key={optId}
                               className={`text-[10px] text-center ${

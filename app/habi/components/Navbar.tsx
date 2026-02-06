@@ -1,11 +1,13 @@
 'use client';
 
-import { useState } from 'react';
 import Image from 'next/image';
 
-export default function Navbar() {
-  const [country, setCountry] = useState<'COL' | 'MX'>('COL');
+interface NavbarProps {
+  /** Mercado activo según pipeline de HubSpot (CO = Colombia, MX = México). Por defecto CO. */
+  activeCountry?: 'CO' | 'MX';
+}
 
+export default function Navbar({ activeCountry = 'CO' }: NavbarProps) {
   return (
     <nav className="bg-white py-2 px-3 md:py-3 md:px-8">
       <div className="max-w-7xl mx-auto flex items-center justify-between">
@@ -17,21 +19,15 @@ export default function Navbar() {
           className="h-8 w-auto"
         />
         
-        {/* Country Selector */}
+        {/* Country: CO | MX — el activo según pipeline en negrilla */}
         <div className="flex items-center gap-2 text-sm">
-          <button 
-            onClick={() => setCountry('COL')}
-            className={country === 'COL' ? 'font-bold text-gray-900' : 'text-gray-400'}
-          >
-            COL
-          </button>
+          <span className={activeCountry === 'CO' ? 'font-bold text-gray-900' : 'text-gray-400'}>
+            CO
+          </span>
           <span className="text-gray-300">|</span>
-          <button 
-            onClick={() => setCountry('MX')}
-            className={country === 'MX' ? 'font-bold text-gray-900' : 'text-gray-400'}
-          >
+          <span className={activeCountry === 'MX' ? 'font-bold text-gray-900' : 'text-gray-400'}>
             MX
-          </button>
+          </span>
         </div>
       </div>
     </nav>

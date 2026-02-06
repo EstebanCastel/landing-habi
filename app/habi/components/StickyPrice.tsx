@@ -10,6 +10,7 @@ interface StickyPriceProps {
   precioCuentaPropia?: number;
   donationAmount?: number;
   onHabiClick?: () => void;
+  evaluacionInmueble?: number;
 }
 
 export default function StickyPrice({ 
@@ -19,7 +20,8 @@ export default function StickyPrice({
   precioInmobiliaria = 0,
   precioCuentaPropia = 0,
   donationAmount = 0,
-  onHabiClick
+  onHabiClick,
+  evaluacionInmueble
 }: StickyPriceProps) {
   // Determinar precio y texto según modalidad (ya con donación descontada)
   const getContent = () => {
@@ -44,8 +46,10 @@ export default function StickyPrice({
         };
       default:
         return {
+          // Precio dinámico: cuotas BNPL seleccionadas o precio_comite
+          // Se ajusta con trámites/remodelación si esas secciones están activas
           price: currentPrice - donationAmount,
-          label: donationAmount > 0 ? 'Recibirás (con donación)' : 'Precio estimado de compra',
+          label: 'Precio estimado de compra',
           buttonText: 'Continuar',
           buttonAction: () => {}
         };

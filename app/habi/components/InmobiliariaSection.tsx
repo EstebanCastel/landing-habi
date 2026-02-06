@@ -1,7 +1,6 @@
 'use client';
 
 import DonationSection from './DonationSection';
-import PersonalAdvisor from './PersonalAdvisor';
 
 interface InmobiliariaSectionProps {
   precioInmobiliaria: number;
@@ -11,6 +10,7 @@ interface InmobiliariaSectionProps {
   donationAmount: number;
   onDonationChange: (optionId: string, amount: number) => void;
   onDonationRef?: (ref: HTMLDivElement | null) => void;
+  whatsappAsesor?: string;
 }
 
 export default function InmobiliariaSection({
@@ -20,7 +20,8 @@ export default function InmobiliariaSection({
   selectedDonation,
   donationAmount,
   onDonationChange,
-  onDonationRef
+  onDonationRef,
+  whatsappAsesor
 }: InmobiliariaSectionProps) {
   // Precio neto después de comisión y donación
   const precioNeto = precioInmobiliaria * 0.95;
@@ -116,11 +117,6 @@ export default function InmobiliariaSection({
         </div>
       </div>
 
-      {/* Asesor Personal */}
-      <div className="-mx-6">
-        <PersonalAdvisor />
-      </div>
-
       {/* Donación */}
       <div className="-mx-6">
         <DonationSection 
@@ -157,7 +153,14 @@ export default function InmobiliariaSection({
       <button className="w-full bg-purple-600 text-white py-3 rounded-lg font-medium hover:bg-purple-700 transition mb-3">
         Publicar mi inmueble
       </button>
-      <button className="w-full bg-white text-purple-600 py-3 rounded-lg font-medium border border-purple-200 hover:bg-purple-50 transition">
+      <button 
+        onClick={() => {
+          if (whatsappAsesor) {
+            window.open(whatsappAsesor.startsWith('http') ? whatsappAsesor : `https://wa.me/${whatsappAsesor.replace(/[^\d]/g, '')}`, '_blank');
+          }
+        }}
+        className="w-full bg-white text-purple-600 py-3 rounded-lg font-medium border border-purple-200 hover:bg-purple-50 transition"
+      >
         Hablar con un asesor
       </button>
     </div>

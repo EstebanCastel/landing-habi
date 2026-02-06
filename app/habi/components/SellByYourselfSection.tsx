@@ -1,7 +1,6 @@
 'use client';
 
 import DonationSection from './DonationSection';
-import PersonalAdvisor from './PersonalAdvisor';
 
 type Modalidad = 'habi' | 'inmobiliaria' | 'cuenta_propia';
 
@@ -32,9 +31,6 @@ export default function SellByYourselfSection({
 
   return (
     <div id="configurator-section" className="bg-white">
-      {/* Asesor Personal */}
-      <PersonalAdvisor />
-
       {/* Donación */}
       <DonationSection 
         selectedDonation={selectedDonation}

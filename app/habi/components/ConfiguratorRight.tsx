@@ -1,13 +1,20 @@
 'use client';
 
+/**
+ * ConfiguratorRight - Wrapper component for backward compatibility
+ * 
+ * This component is now a thin wrapper around SectionRenderer.
+ * It loads the sections configuration from JSON and passes all props
+ * to the SectionRenderer for dynamic rendering.
+ * 
+ * To change section order or add/remove sections, edit:
+ * app/config/sections.json
+ */
+
+import SectionRenderer from './SectionRenderer';
+import sectionsConfig from '../../config/sections.json';
 import { HabiConfiguration } from '../../types/habi';
-import PropertyInfo from './PropertyInfo';
-import ComparablesSection from './ComparablesSection';
-import SaleModality from './SaleModality';
-import PaymentOptions from './PaymentOptions';
-import HabiDirectSection from './HabiDirectSection';
-import InmobiliariaSection from './InmobiliariaSection';
-import SellByYourselfSection from './SellByYourselfSection';
+import type { LandingConfig } from '../../config/componentsRegistry';
 
 interface Comparable {
   id: string;
@@ -63,102 +70,13 @@ interface ConfiguratorRightProps {
   onSelectComparable: (comparable: Comparable | null) => void;
 }
 
-export default function ConfiguratorRight({
-  configuration,
-  setConfiguration,
-  currentPrice,
-  valorMercado,
-  propertyData,
-  modalidadVenta,
-  setModalidadVenta,
-  precioInmobiliaria,
-  setPrecioInmobiliaria,
-  precioCuentaPropia,
-  setPrecioCuentaPropia,
-  selectedDonation,
-  donationAmount,
-  onDonationChange,
-  onPropertyRef,
-  onComparablesRef,
-  onSaleModalityRef,
-  onDonationRef,
-  comparables,
-  selectedComparable,
-  onSelectComparable
-}: ConfiguratorRightProps) {
+export default function ConfiguratorRight(props: ConfiguratorRightProps) {
+  const landingConfig = sectionsConfig as LandingConfig;
+  
   return (
-    <div className="pb-24">
-      {/* Información del inmueble */}
-      <PropertyInfo 
-        propertyData={propertyData} 
-        onSectionRef={onPropertyRef}
-      />
-
-      {/* Análisis de mercado con mapa */}
-      <ComparablesSection 
-        onSectionRef={onComparablesRef}
-        comparables={comparables}
-        selectedComparable={selectedComparable}
-        onSelectComparable={onSelectComparable}
-        ofertaHabi={currentPrice}
-      />
-
-      {/* Modalidad de venta */}
-      <SaleModality 
-        modalidadVenta={modalidadVenta} 
-        setModalidadVenta={setModalidadVenta}
-        onSectionRef={onSaleModalityRef}
-      />
-
-      {/* Forma de pago - Solo para Habi te compra */}
-      {modalidadVenta === 'habi' && (
-        <PaymentOptions 
-          configuration={configuration}
-          setConfiguration={setConfiguration}
-          valorMercado={valorMercado}
-        />
-      )}
-
-      {/* Contenido de Habi te compra */}
-      {modalidadVenta === 'habi' && (
-        <HabiDirectSection
-          configuration={configuration}
-          setConfiguration={setConfiguration}
-          currentPrice={currentPrice}
-          valorMercado={valorMercado}
-          selectedDonation={selectedDonation}
-          donationAmount={donationAmount}
-          onDonationChange={onDonationChange}
-          onDonationRef={onDonationRef}
-        />
-      )}
-
-      {/* Contenido de Inmobiliaria */}
-      {modalidadVenta === 'inmobiliaria' && (
-        <InmobiliariaSection
-          precioInmobiliaria={precioInmobiliaria}
-          setPrecioInmobiliaria={setPrecioInmobiliaria}
-          valorMercado={valorMercado}
-          selectedDonation={selectedDonation}
-          donationAmount={donationAmount}
-          onDonationChange={onDonationChange}
-          onDonationRef={onDonationRef}
-        />
-      )}
-
-      {/* Contenido de Vender por mi cuenta */}
-      {modalidadVenta === 'cuenta_propia' && (
-        <SellByYourselfSection
-          precioCuentaPropia={precioCuentaPropia}
-          setPrecioCuentaPropia={setPrecioCuentaPropia}
-          valorMercado={valorMercado}
-          setModalidadVenta={setModalidadVenta}
-          selectedDonation={selectedDonation}
-          donationAmount={donationAmount}
-          onDonationChange={onDonationChange}
-          onDonationRef={onDonationRef}
-        />
-      )}
-    </div>
+    <SectionRenderer
+      sections={landingConfig.sections}
+      {...props}
+    />
   );
 }
