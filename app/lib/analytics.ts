@@ -18,12 +18,12 @@ const trackToBoth = (
 
 /**
  * Eventos de analytics para la landing de propuesta de compra Habi
- * Usa el sufijo _bnpl para reutilizar la misma fuente de Segment/GA
+ * Cada evento incluye country (CO/MX) y un nombre descriptivo de la sección
  */
 export const analytics = {
   // ─── Navegación / Páginas ─────────────────────────
   pageView: (pageName: string, props?: { dealUuid?: string; country?: string }) => {
-    trackToBoth('page_view_bnpl', { category: 'navigation', label: pageName }, {
+    trackToBoth('page_view_landing', { category: 'navigation', label: pageName }, {
       page_name: pageName,
       deal_uuid: props?.dealUuid,
       country: props?.country,
@@ -32,21 +32,21 @@ export const analytics = {
 
   // ─── Carga de datos ──────────────────────────────
   hubspotLoaded: (dealUuid: string, country: string) => {
-    trackToBoth('hubspot_loaded_bnpl', { category: 'data', label: `${country}_${dealUuid}` }, {
+    trackToBoth('hubspot_loaded', { category: 'data', label: `${country}_${dealUuid}` }, {
       deal_uuid: dealUuid,
       country,
     })
   },
 
   hubspotError: (dealUuid: string, errorMsg: string) => {
-    trackToBoth('hubspot_error_bnpl', { category: 'error', label: dealUuid }, {
+    trackToBoth('hubspot_error', { category: 'error', label: dealUuid }, {
       deal_uuid: dealUuid,
       error_message: errorMsg,
     })
   },
 
   dataLoaded: (source: 'hesh' | 'comparables', country: string, nid: string) => {
-    trackToBoth('data_loaded_bnpl', { category: 'data', label: `${source}_${country}` }, {
+    trackToBoth(`data_loaded_${source}`, { category: 'data', label: `${country}_${nid}` }, {
       data_source: source,
       country,
       nid,
@@ -55,7 +55,7 @@ export const analytics = {
 
   // ─── Secciones visibles ──────────────────────────
   sectionViewed: (sectionName: string, country?: string) => {
-    trackToBoth('section_viewed_bnpl', { category: 'engagement', label: sectionName }, {
+    trackToBoth(`section_viewed_${sectionName}`, { category: 'engagement', label: sectionName }, {
       section_name: sectionName,
       country,
     })
@@ -63,7 +63,7 @@ export const analytics = {
 
   // ─── Pago a cuotas ───────────────────────────────
   paymentOptionSelected: (option: string, price: number, country?: string) => {
-    trackToBoth('payment_option_selected_bnpl', { category: 'engagement', label: option, value: price }, {
+    trackToBoth('payment_option_selected', { category: 'engagement_payment', label: option, value: price }, {
       payment_option: option,
       price,
       country,
@@ -72,7 +72,7 @@ export const analytics = {
 
   // ─── Costos (tramites / remodelación) ────────────
   costToggleChanged: (costType: 'tramites' | 'remodelacion', value: 'habi' | 'cliente', country?: string) => {
-    trackToBoth('cost_toggle_changed_bnpl', { category: 'engagement', label: `${costType}_${value}` }, {
+    trackToBoth(`cost_toggle_${costType}`, { category: 'engagement_costs', label: `${costType}_${value}` }, {
       cost_type: costType,
       selected_value: value,
       country,
@@ -81,7 +81,7 @@ export const analytics = {
 
   // ─── Resumen de precios (expandir/colapsar) ──────
   pricingSummaryToggled: (expanded: boolean, country?: string) => {
-    trackToBoth('pricing_summary_toggled_bnpl', { category: 'engagement', label: expanded ? 'expanded' : 'collapsed' }, {
+    trackToBoth('pricing_summary_toggled', { category: 'engagement_pricing', label: expanded ? 'expanded' : 'collapsed' }, {
       expanded,
       country,
     })
@@ -89,7 +89,7 @@ export const analytics = {
 
   // ─── Comparables ─────────────────────────────────
   comparableSelected: (comparableId: string, country?: string) => {
-    trackToBoth('comparable_selected_bnpl', { category: 'engagement', label: comparableId }, {
+    trackToBoth('comparable_selected', { category: 'engagement_comparables', label: comparableId }, {
       comparable_id: comparableId,
       country,
     })
@@ -97,7 +97,7 @@ export const analytics = {
 
   // ─── Contacto / WhatsApp ─────────────────────────
   whatsappClick: (location: string, country?: string) => {
-    trackToBoth('whatsapp_click_bnpl', { category: 'conversion', label: location }, {
+    trackToBoth('whatsapp_click', { category: 'conversion', label: `${location}_${country || 'unknown'}` }, {
       click_location: location,
       country,
     })
@@ -105,7 +105,7 @@ export const analytics = {
 
   // ─── CTA (Continuar con la venta, etc.) ──────────
   ctaClick: (ctaName: string, location: string, country?: string) => {
-    trackToBoth('cta_click_bnpl', { category: 'conversion', label: `${ctaName}_${location}` }, {
+    trackToBoth(`cta_${ctaName}`, { category: 'conversion', label: `${location}_${country || 'unknown'}` }, {
       cta_name: ctaName,
       cta_location: location,
       country,
@@ -114,21 +114,21 @@ export const analytics = {
 
   // ─── Calculadora de gastos ───────────────────────
   calculatorOpened: (country?: string) => {
-    trackToBoth('calculator_opened_bnpl', { category: 'engagement', label: 'expense_calculator' }, {
+    trackToBoth('calculator_opened', { category: 'engagement_calculator', label: 'expense_calculator' }, {
       calculator_type: 'expense_calculator',
       country,
     })
   },
 
   calculatorFieldFilled: (fieldName: string, country?: string) => {
-    trackToBoth('calculator_field_filled_bnpl', { category: 'engagement', label: fieldName }, {
+    trackToBoth('calculator_field_filled', { category: 'engagement_calculator', label: fieldName }, {
       field_name: fieldName,
       country,
     })
   },
 
   calculatorResultsViewed: (totalExpenses?: number, country?: string) => {
-    trackToBoth('calculator_results_viewed_bnpl', { category: 'engagement', label: 'expense_calculator', value: totalExpenses }, {
+    trackToBoth('calculator_results_viewed', { category: 'engagement_calculator', label: 'expense_calculator', value: totalExpenses }, {
       calculator_type: 'expense_calculator',
       total_expenses: totalExpenses,
       country,
@@ -136,7 +136,7 @@ export const analytics = {
   },
 
   calculatorReset: (country?: string) => {
-    trackToBoth('calculator_reset_bnpl', { category: 'engagement', label: 'expense_calculator' }, {
+    trackToBoth('calculator_reset', { category: 'engagement_calculator', label: 'expense_calculator' }, {
       calculator_type: 'expense_calculator',
       country,
     })
@@ -144,7 +144,7 @@ export const analytics = {
 
   // ─── Modalidad de venta ──────────────────────────
   saleModalitySelected: (modality: string, country?: string) => {
-    trackToBoth('sale_modality_selected_bnpl', { category: 'engagement', label: modality }, {
+    trackToBoth('sale_modality_selected', { category: 'engagement_modality', label: `${modality}_${country || 'unknown'}` }, {
       modality,
       country,
     })
@@ -152,29 +152,31 @@ export const analytics = {
 
   // ─── Liquidez ────────────────────────────────────
   liquidityAmountChanged: (amount: number, country?: string) => {
-    trackToBoth('liquidity_amount_changed_bnpl', { category: 'engagement', value: amount }, {
+    trackToBoth('liquidity_amount_changed', { category: 'engagement_liquidity', value: amount }, {
       amount_needed: amount,
       country,
     })
   },
 
   // ─── Scroll depth ────────────────────────────────
-  scrollDepth: (percentage: number) => {
-    trackToBoth(`scroll_${percentage}_bnpl`, { category: 'engagement', label: `${percentage}%`, value: percentage }, {
+  scrollDepth: (percentage: number, country?: string) => {
+    trackToBoth(`scroll_${percentage}`, { category: 'engagement_scroll', label: `${percentage}%`, value: percentage }, {
       scroll_percentage: percentage,
+      country,
     })
   },
 
   // ─── Tiempo en página ────────────────────────────
-  timeOnPage: (seconds: number) => {
-    trackToBoth('time_on_page_bnpl', { category: 'engagement', value: seconds }, {
+  timeOnPage: (seconds: number, country?: string) => {
+    trackToBoth('time_on_page', { category: 'engagement', value: seconds }, {
       seconds_on_page: seconds,
+      country,
     })
   },
 
   // ─── Errores ─────────────────────────────────────
   errorOccurred: (errorType: string, errorMessage: string) => {
-    trackToBoth('error_bnpl', { category: 'error', label: `${errorType}_${errorMessage}` }, {
+    trackToBoth('error_landing', { category: 'error', label: `${errorType}_${errorMessage}` }, {
       error_type: errorType,
       error_message: errorMessage,
     })
@@ -182,14 +184,14 @@ export const analytics = {
 }
 
 // ─── Tracking automático de tiempo en página ───────
-export const initPageTimeTracking = () => {
+export const initPageTimeTracking = (country?: string) => {
   if (typeof window !== 'undefined') {
     const startTime = Date.now()
     
     const trackTimeOnPage = () => {
       const timeSpent = Math.round((Date.now() - startTime) / 1000)
       if (timeSpent > 10) {
-        analytics.timeOnPage(timeSpent)
+        analytics.timeOnPage(timeSpent, country)
       }
     }
 
@@ -202,7 +204,7 @@ export const initPageTimeTracking = () => {
 }
 
 // ─── Tracking automático de scroll depth ───────────
-export const initScrollTracking = () => {
+export const initScrollTracking = (country?: string) => {
   if (typeof window !== 'undefined') {
     let maxScroll = 0
     const milestones = [25, 50, 75, 90, 100]
@@ -217,7 +219,7 @@ export const initScrollTracking = () => {
       
       milestones.forEach(milestone => {
         if (maxScroll >= milestone && !trackedMilestones.has(milestone)) {
-          analytics.scrollDepth(milestone)
+          analytics.scrollDepth(milestone, country)
           trackedMilestones.add(milestone)
         }
       })

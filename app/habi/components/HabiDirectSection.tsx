@@ -162,7 +162,7 @@ function PricingSummary({
             <span className="text-gray-900">{formatPrice(evaluacionInmueble)}</span>
           </div>
           <div className="flex justify-between text-sm">
-            <span className="text-gray-600">Comisión Habi ({comisionPctSummary}%)</span>
+            <span className="text-gray-600">Comisión {isMx ? 'TuHabi' : 'Habi'} ({comisionPctSummary}%)</span>
             <span className="text-gray-600">- {formatPrice(comisionTotal)}</span>
           </div>
           <div className="flex justify-between text-sm">
@@ -367,14 +367,14 @@ export default function HabiDirectSection({
       <div id="configurator-section" className="p-6 bg-white border-b border-gray-200">
         <h3 className="text-xl font-bold mb-2">Así se construye tu oferta</h3>
         <p className="text-sm text-gray-600 mb-6">
-          Elige qué quieres que {isMx ? 'Tu Habi' : 'Habi'} se encargue y cómo prefieres recibir tu dinero.
+          Elige qué quieres que {isMx ? 'TuHabi' : 'Habi'} se encargue y cómo prefieres recibir tu dinero.
         </p>
 
         <div className="space-y-4">
           {/* Comisión */}
           <div className="flex justify-between items-start pb-3 border-b border-gray-100">
             <div className="flex-1">
-              <p className="font-medium text-sm mb-2">Comisión {isMx ? 'Tu Habi' : 'Habi'}</p>
+              <p className="font-medium text-sm mb-2">Comisión {isMx ? 'TuHabi' : 'Habi'}</p>
               <p className="text-xs text-gray-600 mb-1">
                 Comisión total del <strong>{comisionPct}%</strong>.
               </p>
@@ -397,7 +397,7 @@ export default function HabiDirectSection({
               </p>
               <p className="text-xs text-gray-500 mb-2">
                 Estos gastos existen incluso si vendes por tu cuenta.<br />
-                {isMx ? 'Tu Habi' : 'Habi'} los asume por ti desde el inicio.
+                {isMx ? 'TuHabi' : 'Habi'} los asume por ti desde el inicio.
               </p>
               {!isMx && (
                 <button
@@ -417,9 +417,9 @@ export default function HabiDirectSection({
           {/* Tarifa de servicio Habi */}
           <div className="flex justify-between items-start pb-3 border-b border-gray-100">
             <div className="flex-1">
-              <p className="font-medium text-sm mb-2">Tarifa de servicio {isMx ? 'Tu Habi' : 'Habi'}</p>
+              <p className="font-medium text-sm mb-2">Tarifa de servicio {isMx ? 'TuHabi' : 'Habi'}</p>
               <p className="text-xs text-gray-600 mb-1">
-                {isMx ? 'Tu Habi' : 'Habi'} obtiene una ganancia del <strong>{utilidadPct}%</strong> sobre el valor de venta del inmueble.
+                {isMx ? 'TuHabi' : 'Habi'} obtiene una ganancia del <strong>{utilidadPct}%</strong> sobre el valor de venta del inmueble.
               </p>
             </div>
             <div className="text-right ml-4">
@@ -488,7 +488,7 @@ export default function HabiDirectSection({
                 }`}
               >
                 <div className="flex items-center justify-between mb-1">
-                  <span className="font-medium">{isMx ? 'Tu Habi' : 'Habi'} se encarga</span>
+                  <span className="font-medium">{isMx ? 'TuHabi' : 'Habi'} se encarga</span>
                   {configuration.tramites === 'habi' && (
                     <span className="text-sm text-purple-600">✓</span>
                   )}
@@ -562,7 +562,7 @@ export default function HabiDirectSection({
                 }`}
               >
                 <div className="flex items-center justify-between mb-1">
-                  <span className="font-medium">{isMx ? 'Tu Habi' : 'Habi'} se encarga</span>
+                  <span className="font-medium">{isMx ? 'TuHabi' : 'Habi'} se encarga</span>
                   {configuration.remodelacion === 'habi' && (
                     <span className="text-sm text-purple-600">✓</span>
                   )}

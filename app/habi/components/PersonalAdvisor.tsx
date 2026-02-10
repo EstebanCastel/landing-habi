@@ -5,7 +5,8 @@ import { analytics } from '../../lib/analytics';
 
 // Número por defecto de soporte Habi Colombia (no usar número personal)
 const DEFAULT_WHATSAPP_NUMBER = '';
-const DEFAULT_WHATSAPP_MESSAGE = 'Hola, me interesa vender mi inmueble con Habi. ¿Pueden asesorarme?';
+const DEFAULT_WHATSAPP_MESSAGE_CO = 'Hola, me interesa vender mi inmueble con Habi. ¿Pueden asesorarme?';
+const DEFAULT_WHATSAPP_MESSAGE_MX = 'Hola, me interesa vender mi inmueble con TuHabi. ¿Pueden asesorarme?';
 
 // Datos por defecto del asesor
 const DEFAULT_ADVISOR = {
@@ -20,7 +21,10 @@ interface PersonalAdvisorProps {
 }
 
 export default function PersonalAdvisor({ whatsappAsesor, country }: PersonalAdvisorProps) {
-  const advisorName = DEFAULT_ADVISOR.name;
+  const isMx = country === 'MX';
+  const advisorName = isMx ? 'Tu asesor TuHabi' : DEFAULT_ADVISOR.name;
+
+  const whatsappMessage = isMx ? DEFAULT_WHATSAPP_MESSAGE_MX : DEFAULT_WHATSAPP_MESSAGE_CO;
 
   const handleWhatsAppClick = () => {
     analytics.whatsappClick('personal_advisor', country);
@@ -31,12 +35,12 @@ export default function PersonalAdvisor({ whatsappAsesor, country }: PersonalAdv
       } else {
         // Si es solo un número, construir la URL
         const cleanNumber = whatsappAsesor.replace(/[^\d+]/g, '');
-        const encodedMessage = encodeURIComponent(DEFAULT_WHATSAPP_MESSAGE);
+        const encodedMessage = encodeURIComponent(whatsappMessage);
         window.open(`https://wa.me/${cleanNumber.replace('+', '')}?text=${encodedMessage}`, '_blank');
       }
     } else if (DEFAULT_WHATSAPP_NUMBER) {
       // Fallback al número por defecto (solo si está configurado)
-      const encodedMessage = encodeURIComponent(DEFAULT_WHATSAPP_MESSAGE);
+      const encodedMessage = encodeURIComponent(whatsappMessage);
       window.open(`https://wa.me/57${DEFAULT_WHATSAPP_NUMBER}?text=${encodedMessage}`, '_blank');
     }
     // Si no hay whatsappAsesor ni DEFAULT_WHATSAPP_NUMBER, no hacer nada

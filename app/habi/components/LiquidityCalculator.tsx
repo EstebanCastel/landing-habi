@@ -20,6 +20,7 @@ interface LiquidityCalculatorProps {
   valorMercado: number;
   ofertaHabi: number;
   onClose: () => void;
+  country?: string;
 }
 
 // Componente de icono de ayuda
@@ -45,7 +46,8 @@ function HelpIcon({ title }: { title: string }) {
   );
 }
 
-export default function LiquidityCalculator({ valorMercado, ofertaHabi, onClose }: LiquidityCalculatorProps) {
+export default function LiquidityCalculator({ valorMercado, ofertaHabi, onClose, country }: LiquidityCalculatorProps) {
+  const brandName = country === 'MX' ? 'TuHabi' : 'Habi';
   const [amountNeeded, setAmountNeeded] = useState<number>(ofertaHabi * 0.3);
   const [selectedCredit, setSelectedCredit] = useState<number>(0);
   const [loanTermMonths, setLoanTermMonths] = useState<number>(24);
@@ -235,7 +237,7 @@ export default function LiquidityCalculator({ valorMercado, ofertaHabi, onClose 
             </div>
           </div>
 
-          {/* Vender con Habi */}
+          {/* Vender con Habi/Tu Habi */}
           <div className="bg-purple-50 border-2 border-purple-300 rounded-xl p-5 relative">
             <div className="absolute -top-3 right-4">
               <span className="bg-purple-600 text-white text-xs font-bold px-3 py-1 rounded-full uppercase tracking-wide">
@@ -244,7 +246,7 @@ export default function LiquidityCalculator({ valorMercado, ofertaHabi, onClose 
             </div>
             
             <div className="flex items-center justify-between mb-4 mt-1">
-              <h4 className="text-xs uppercase tracking-widest font-bold text-purple-700">Vender con Habi</h4>
+              <h4 className="text-xs uppercase tracking-widest font-bold text-purple-700">Vender con {brandName}</h4>
               <div className="w-8 h-8 bg-purple-200 rounded-full flex items-center justify-center">
                 <svg className="w-4 h-4 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />

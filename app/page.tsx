@@ -212,8 +212,8 @@ function HomeContent() {
     const country = bnplPrices?.country ?? 'CO';
     analytics.pageView(dealUuid ? `offer_${dealUuid}` : 'home', { dealUuid: dealUuid || undefined, country });
 
-    const cleanupScroll = initScrollTracking();
-    const cleanupPageTime = initPageTimeTracking();
+    const cleanupScroll = initScrollTracking(country);
+    const cleanupPageTime = initPageTimeTracking(country);
 
     return () => {
       if (cleanupScroll) cleanupScroll();

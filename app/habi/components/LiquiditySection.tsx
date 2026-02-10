@@ -136,7 +136,7 @@ export default function LiquiditySection({ configuration, valorMercado, currentP
         </div>
         <div>
           <h3 className="text-lg font-bold text-gray-900">Simulador de Liquidez</h3>
-          <p className="text-sm text-gray-500">Compara créditos vs vender con {bnplPrices?.country === 'MX' ? 'Tu Habi' : 'Habi'}</p>
+          <p className="text-sm text-gray-500">Compara créditos vs vender con {bnplPrices?.country === 'MX' ? 'TuHabi' : 'Habi'}</p>
         </div>
       </div>
 
@@ -146,7 +146,7 @@ export default function LiquiditySection({ configuration, valorMercado, currentP
         <div className="mb-6">
           <h4 className="text-base font-semibold text-gray-900 mb-2">¿Necesitas liquidez inmediata?</h4>
           <p className="text-sm text-gray-600">
-            Compara el costo real de solicitar un crédito vs vender tu inmueble con {bnplPrices?.country === 'MX' ? 'Tu Habi' : 'Habi'}.
+            Compara el costo real de solicitar un crédito vs vender tu inmueble con {bnplPrices?.country === 'MX' ? 'TuHabi' : 'Habi'}.
           </p>
         </div>
 
@@ -305,7 +305,7 @@ export default function LiquiditySection({ configuration, valorMercado, currentP
             </div>
 
             <div className="flex items-center justify-between mb-4 mt-1">
-              <h4 className="text-xs uppercase tracking-widest font-bold text-purple-700">Vender con {bnplPrices?.country === 'MX' ? 'Tu Habi' : 'Habi'}</h4>
+              <h4 className="text-xs uppercase tracking-widest font-bold text-purple-700">Vender con {bnplPrices?.country === 'MX' ? 'TuHabi' : 'Habi'}</h4>
               <div className="w-8 h-8 bg-purple-200 rounded-full flex items-center justify-center">
                 <svg className="w-4 h-4 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path
@@ -324,7 +324,7 @@ export default function LiquiditySection({ configuration, valorMercado, currentP
                 <span className="font-semibold text-gray-900">{formatPrice(Math.round(evaluacionInmueble))}</span>
               </div>
               <div className="flex justify-between items-center py-2 border-b border-purple-200">
-                <span className="text-sm text-gray-600">Oferta {bnplPrices?.country === 'MX' ? 'Tu Habi' : 'Habi'}</span>
+                <span className="text-sm text-gray-600">Oferta {bnplPrices?.country === 'MX' ? 'TuHabi' : 'Habi'}</span>
                 <span className="font-semibold text-purple-700">{formatPrice(Math.round(ofertaHabi))}</span>
               </div>
               <div className="flex justify-between items-center py-2 border-b border-purple-200">
@@ -354,7 +354,7 @@ export default function LiquiditySection({ configuration, valorMercado, currentP
           }`}
         >
           <p className="text-xs uppercase tracking-widest font-semibold text-gray-500 mb-2">
-            {calculations.savings > 0 ? `Con ${bnplPrices?.country === 'MX' ? 'Tu Habi' : 'Habi'} te ahorras` : 'Diferencia'}
+            {calculations.savings > 0 ? `Con ${bnplPrices?.country === 'MX' ? 'TuHabi' : 'Habi'} te ahorras` : 'Diferencia'}
           </p>
           <p className={`text-4xl font-black mb-2 ${calculations.savings > 0 ? 'text-purple-700' : 'text-gray-800'}`}>
             {formatPrice(Math.abs(Math.round(calculations.savings)))}

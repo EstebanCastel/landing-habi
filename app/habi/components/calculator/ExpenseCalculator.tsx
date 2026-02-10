@@ -28,9 +28,11 @@ interface HabiVsMarketComparisonProps {
   totalExpenses: number;
   netAmount: number;
   habiOffer: number;
+  country?: string;
 }
 
-function HabiVsMarketComparison({ totalExpenses, netAmount, habiOffer }: HabiVsMarketComparisonProps) {
+function HabiVsMarketComparison({ totalExpenses, netAmount, habiOffer, country }: HabiVsMarketComparisonProps) {
+  const brandName = country === 'MX' ? 'TuHabi' : 'Habi';
   const [progress, setProgress] = useState(1);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
 
@@ -82,7 +84,7 @@ function HabiVsMarketComparison({ totalExpenses, netAmount, habiOffer }: HabiVsM
       <div className="px-6">
         {/* Header */}
         <div className="text-center mb-8">
-          <h3 className="text-2xl font-bold text-purple-700 mb-2">Habi vs Mercado Tradicional</h3>
+          <h3 className="text-2xl font-bold text-purple-700 mb-2">{brandName} vs Mercado Tradicional</h3>
           <p className="text-gray-600">Compara cómo evolucionan tus ingresos mes a mes</p>
         </div>
 
@@ -98,11 +100,11 @@ function HabiVsMarketComparison({ totalExpenses, netAmount, habiOffer }: HabiVsM
 
             {/* Cards */}
             <div className="flex-1 grid grid-cols-2 gap-4 w-full">
-              {/* Habi */}
+              {/* Habi/Tu Habi */}
               <div className="text-center space-y-2">
-                <p className="text-xs uppercase tracking-widest font-bold text-purple-700">Habi</p>
+                <p className="text-xs uppercase tracking-widest font-bold text-purple-700">{brandName}</p>
                 <div className="py-2">
-                  <img src="/habilogo.jpg" alt="Habi" className="w-12 h-12 mx-auto rounded-lg object-contain" />
+                  <img src={country === 'MX' ? '/tuhabi.svg' : '/habilogo.jpg'} alt={brandName} className="w-12 h-12 mx-auto rounded-lg object-contain" />
                 </div>
                 <p className="text-2xl md:text-4xl font-black text-purple-700">
                   ${habiTotal.toFixed(1)}M
@@ -144,7 +146,7 @@ function HabiVsMarketComparison({ totalExpenses, netAmount, habiOffer }: HabiVsM
               <div className="flex gap-4">
                 <div className="flex items-center gap-2">
                   <div className="w-3 h-3 rounded-full bg-purple-600"></div>
-                  <span className="text-xs font-semibold text-gray-700">Habi</span>
+                  <span className="text-xs font-semibold text-gray-700">{brandName}</span>
                 </div>
                 <div className="flex items-center gap-2">
                   <div className="w-3 h-3 rounded-full bg-red-500"></div>
@@ -451,7 +453,7 @@ export default function ExpenseCalculator({
           {/* Header */}
           <header className="calculator-header">
             <div className="logo-container">
-              <img src="/habilogo.jpg" alt="Habi Logo" style={{ width: '36px', height: '36px', borderRadius: '8px', objectFit: 'contain' }} />
+              <img src={country === 'MX' ? '/tuhabi.svg' : '/habilogo.jpg'} alt={`${country === 'MX' ? 'TuHabi' : 'Habi'} Logo`} style={{ width: '36px', height: '36px', borderRadius: '8px', objectFit: 'contain' }} />
               <span className="app-title">CALCULADORA DE GASTOS</span>
             </div>
             <span className="calculate-link">
@@ -596,7 +598,7 @@ export default function ExpenseCalculator({
                     {showHabiOffer && (
                       <div className="input-group habi-offer-group">
                         <label className="input-label">
-                          Oferta de Habi (opcional)
+                          Oferta de {country === 'MX' ? 'TuHabi' : 'Habi'} (opcional)
                         </label>
                         <div className="input-with-icon">
                           <input
@@ -645,7 +647,7 @@ export default function ExpenseCalculator({
             {/* Header */}
             <header className="calculator-header">
               <div className="logo-container">
-                <img src="/habilogo.jpg" alt="Habi Logo" style={{ width: '36px', height: '36px', borderRadius: '8px', objectFit: 'contain' }} />
+                <img src={country === 'MX' ? '/tuhabi.svg' : '/habilogo.jpg'} alt={`${country === 'MX' ? 'TuHabi' : 'Habi'} Logo`} style={{ width: '36px', height: '36px', borderRadius: '8px', objectFit: 'contain' }} />
                 <span className="app-title">CALCULADORA DE GASTOS</span>
               </div>
               <div className="status-badge">RESULTADO</div>
@@ -1062,6 +1064,7 @@ export default function ExpenseCalculator({
           totalExpenses={results.totalExpenses}
           netAmount={results.netAmount}
           habiOffer={bnpl9Value}
+          country={country}
         />
       )}
     </div>

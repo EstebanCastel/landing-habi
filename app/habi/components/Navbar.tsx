@@ -16,7 +16,7 @@ export default function Navbar({ activeCountry = 'CO' }: NavbarProps) {
         {isMx ? (
           <Image
             src="/tuhabi.svg"
-            alt="Tu Habi"
+            alt="TuHabi"
             width={80}
             height={32}
             className="h-8 w-auto"

@@ -345,10 +345,26 @@ export default function SaleModality({ modalidadVenta, setModalidadVenta, onSect
   const modalContentRef = useRef<HTMLDivElement>(null);
   const sectionRef = useRef<HTMLDivElement>(null);
   
+  const isMx = country === 'MX';
+  const brandName = isMx ? 'TuHabi' : 'Habi';
+
+  // Aplicar branding dinámico a tabs según país
+  const brandedTabs = TABS.map(tab => {
+    if (tab.id === 'habi') {
+      return {
+        ...tab,
+        label: isMx ? 'TuHabi te compra' : 'Habi te compra',
+        title: `Venta directa a ${brandName}`,
+        description: `Te compramos tu inmueble directamente. Sin publicar, sin visitas de extraños, sin negociaciones eternas. Recibe tu dinero en días, no en meses.`,
+      };
+    }
+    return tab;
+  });
+
   // Filtrar tabs según availableModalities (si se proporciona)
   const filteredTabs = availableModalities 
-    ? TABS.filter(tab => availableModalities.includes(tab.id))
-    : TABS;
+    ? brandedTabs.filter(tab => availableModalities.includes(tab.id))
+    : brandedTabs;
   
   const filteredComparisonOptions = availableModalities
     ? COMPARISON_OPTIONS.filter(opt => availableModalities.includes(opt.id))
