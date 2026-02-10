@@ -10,6 +10,8 @@ export interface HubSpotProperties {
   bnpl6: string
   bnpl9: string
   precio_comite: string
+  precio_comite_original?: string | null // precio del comité sin negociación comercial
+  bnpl_1_comercial_raw?: string | null // valor crudo de bnpl_1__comercial_ (null si no existía)
   whatsapp_asesor?: string
   nombre_del_conjunto?: string | null
   area_construida?: string | null
@@ -19,6 +21,10 @@ export interface HubSpotProperties {
   tipo_inmueble_id?: string | null
   negocio_aplica_para_bnpl?: string | null
   razon_de_venta?: string | null
+  valor_subsidiado?: string | null
+  valor_subsidiado_extraordinario?: string | null
+  subsidio_aprobado_lider?: string | null
+  subsidio_aprobado_director?: string | null
   error?: boolean
   message?: string
 }

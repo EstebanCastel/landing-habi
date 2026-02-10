@@ -15,6 +15,7 @@ const ERROR_MESSAGE = {
 const PIPELINES_MX = [
   '731899270', // Sellers - Market Maker MX (NUEVO) - internal value
   '10867264',  // ID observado en API
+  '638550350', // Pipeline MX adicional observado en API
 ]
 const PIPELINES_CO = [
   '798578615', // Sellers - Market Maker CO (NUEVO) - internal value
@@ -60,7 +61,7 @@ async function searchDealByUuid(dealUuid: string, apiKey: string) {
         ]
       }
     ],
-    properties: ['bnpl_3', 'bnpl_6', 'bnpl_9', 'precio_comite', 'whatsapp_asesor', 'deal_uuid', 'bnpl_1__comercial_', 'bnpl_3__comercial_', 'bnpl_6__comercial_', 'bnpl_9__comercial_', 'valor_subsidiado', 'nombre_del_conjunto', 'area_construida', 'direccion', 'numero_habitaciones', 'numero_de_banos', 'tipo_inmueble_id', 'negocio_aplica_para_bnpl_', 'razon_de_venta_usuario_gabi_mx', 'pipeline', 'final_prestamo_mx'],
+    properties: ['bnpl_3', 'bnpl_6', 'bnpl_9', 'precio_comite', 'whatsapp_asesor', 'deal_uuid', 'bnpl_1__comercial_', 'bnpl_3__comercial_', 'bnpl_6__comercial_', 'bnpl_9__comercial_', 'valor_subsidiado', 'valor_subsidiado_extraordinario', 'subsidio_aprobado_lider', 'subsidio_aprobado_director', 'nombre_del_conjunto', 'area_construida', 'direccion', 'numero_habitaciones', 'numero_de_banos', 'tipo_inmueble_id', 'negocio_aplica_para_bnpl_', 'razon_de_venta_usuario_gabi_mx', 'pipeline', 'oferta_final_prestamo_mx_calculada', 'valor_negociado', 'final_final_aprobado_bo_prestamo_mx_calculo'],
     limit: 1
   }
   
@@ -99,7 +100,7 @@ async function getDealById(dealId: string, apiKey: string) {
   const url = `https://api.hubapi.com/crm/v3/objects/deals/${dealId}`
   
   const params = new URLSearchParams({
-    properties: 'bnpl_3,bnpl_6,bnpl_9,precio_comite,whatsapp_asesor,deal_uuid,dealname,bnpl_1__comercial_,bnpl_3__comercial_,bnpl_6__comercial_,bnpl_9__comercial_,valor_subsidiado,nombre_del_conjunto,area_construida,direccion,numero_habitaciones,numero_de_banos,tipo_inmueble_id,negocio_aplica_para_bnpl_,razon_de_venta_usuario_gabi_mx,pipeline,oferta_final_prestamo_mx_calculada'
+    properties: 'bnpl_3,bnpl_6,bnpl_9,precio_comite,whatsapp_asesor,deal_uuid,dealname,bnpl_1__comercial_,bnpl_3__comercial_,bnpl_6__comercial_,bnpl_9__comercial_,valor_subsidiado,valor_subsidiado_extraordinario,subsidio_aprobado_lider,subsidio_aprobado_director,nombre_del_conjunto,area_construida,direccion,numero_habitaciones,numero_de_banos,tipo_inmueble_id,negocio_aplica_para_bnpl_,razon_de_venta_usuario_gabi_mx,pipeline,oferta_final_prestamo_mx_calculada,valor_negociado,final_final_aprobado_bo_prestamo_mx_calculo'
   })
   
   const response = await fetch(`${url}?${params}`, {
@@ -212,8 +213,9 @@ export async function GET(request: NextRequest) {
     const bnpl6ComercialValue = parseHubSpotNumber(properties.bnpl_6__comercial_)
     const bnpl9ComercialValue = parseHubSpotNumber(properties.bnpl_9__comercial_)
     const valorSubsidiadoValue = parseHubSpotNumber(properties.valor_subsidiado)
+    const valorSubsidiadoExtraValue = parseHubSpotNumber(properties.valor_subsidiado_extraordinario)
     
-    // Lógica de negocio BNPL con límite máximo global
+    // Lógica de negocio BNPL con límite máximo basado en subsidios aprobados
     let bnpl1Value: string
     let bnpl3Value: string
     let bnpl6Value: string
@@ -225,6 +227,7 @@ export async function GET(request: NextRequest) {
     const bnpl9ComercialNum = bnpl9ComercialValue ? Number(bnpl9ComercialValue) : null
     const precioComiteNum = precioComiteValue ? Number(precioComiteValue) : 0
     const valorSubsidiadoNum = valorSubsidiadoValue ? Number(valorSubsidiadoValue) : 0
+    const valorSubsidiadoExtraNum = valorSubsidiadoExtraValue ? Number(valorSubsidiadoExtraValue) : 0
     const bnpl3BaseNum = bnpl3BaseValue ? Number(bnpl3BaseValue) : 0
     const bnpl6BaseNum = bnpl6BaseValue ? Number(bnpl6BaseValue) : 0
     const bnpl9BaseNum = bnpl9BaseValue ? Number(bnpl9BaseValue) : 0
@@ -237,11 +240,15 @@ export async function GET(request: NextRequest) {
     const incremento3a6 = bnpl6BaseNum > 0 && bnpl3BaseNum > 0 ? bnpl6BaseNum / bnpl3BaseNum : 1
     const incremento6a9 = bnpl9BaseNum > 0 && bnpl6BaseNum > 0 ? bnpl9BaseNum / bnpl6BaseNum : 1
     
-    const limiteMaximoGlobal = precioComiteNum + valorSubsidiadoNum + 500000
-    const limiteMaximoBnpl1 = limiteMaximoGlobal
-    const limiteMaximoBnpl3 = Math.round(limiteMaximoGlobal * (1 + porcentajeCrecimiento3))
-    const limiteMaximoBnpl6 = Math.round(limiteMaximoGlobal * (1 + porcentajeCrecimiento6))
-    const limiteMaximoBnpl9 = Math.round(limiteMaximoGlobal * (1 + porcentajeCrecimiento9))
+    // Límite máximo BNPL1 = precio_comite + subsidios aprobados
+    const subsidioLider = (properties.subsidio_aprobado_lider?.toLowerCase().trim() === 'si') ? valorSubsidiadoNum : 0
+    const subsidioDirector = (properties.subsidio_aprobado_director?.toLowerCase().trim() === 'si') ? valorSubsidiadoExtraNum : 0
+    const limiteMaximoBnpl1 = precioComiteNum + subsidioLider + subsidioDirector
+    
+    // Los límites de 3/6/9 cuotas escalan proporcionalmente al crecimiento base
+    const limiteMaximoBnpl3 = Math.round(limiteMaximoBnpl1 * (1 + porcentajeCrecimiento3))
+    const limiteMaximoBnpl6 = Math.round(limiteMaximoBnpl1 * (1 + porcentajeCrecimiento6))
+    const limiteMaximoBnpl9 = Math.round(limiteMaximoBnpl1 * (1 + porcentajeCrecimiento9))
     
     const hayAlgunValorComercial = bnpl1ComercialNum || bnpl3ComercialNum || bnpl6ComercialNum || bnpl9ComercialNum
     
@@ -317,6 +324,7 @@ export async function GET(request: NextRequest) {
     // Mapper pipeline → país (CO / MX)
     const pipeline = properties.pipeline ?? null
     const country = pipelineToCountry(pipeline)
+    console.log(`[HubSpot] pipeline=${pipeline}, country=${country}, oferta_final_prestamo_mx_calculada=${properties.oferta_final_prestamo_mx_calculada}`)
     
     let precioComiteFinal = bnpl1Value
     let bnpl3Final = bnpl3Value
@@ -324,10 +332,61 @@ export async function GET(request: NextRequest) {
     let bnpl9Final = bnpl9Value
     let negocioAplicaBnpl = properties.negocio_aplica_para_bnpl_ || null
     
+    // Variable para saber si hubo negociación comercial (CO o MX)
+    let comercialRaw: string | null = bnpl1ComercialValue || null
+    // precio_comite_original: siempre el precio base del comité (sin negociación)
+    let precioComiteOriginal: string | null = precioComiteValue || null
+    
     if (country === 'MX') {
-      // México: no tiene pago a cuotas; precio = final_prestamo_mx
-      const finalPrestamoMx = parseHubSpotNumber(properties.final_prestamo_mx)
-      precioComiteFinal = finalPrestamoMx || bnpl1Value
+      // México: no tiene pago a cuotas
+      const ofertaBaseMx = parseHubSpotNumber(properties.oferta_final_prestamo_mx_calculada)
+      const valorNegociado = parseHubSpotNumber(properties.valor_negociado)
+      const topeAprobadoMx = parseHubSpotNumber(properties.final_final_aprobado_bo_prestamo_mx_calculo)
+      
+      // Precio base MX (equivalente a precio_comite en CO)
+      const ofertaBaseMxNum = ofertaBaseMx ? Number(ofertaBaseMx) : 0
+      const valorNegociadoNum = valorNegociado ? Number(valorNegociado) : 0
+      const topeAprobadoMxNum = topeAprobadoMx ? Number(topeAprobadoMx) : 0
+      
+      // El precio_comite_original para MX es oferta_final_prestamo_mx_calculada
+      precioComiteOriginal = ofertaBaseMx || null
+      
+      // Jerarquía de precio MX:
+      // 1. final_final_aprobado_bo_prestamo_mx_calculo (tope máximo, si existe)
+      // 2. valor_negociado (negociado, capado al tope)
+      // 3. oferta_final_prestamo_mx_calculada (precio base)
+      if (topeAprobadoMxNum > 0) {
+        // Tope aprobado existe: usar como precio final
+        // valor_negociado debe ser <= tope aprobado
+        if (valorNegociadoNum > 0 && valorNegociadoNum <= topeAprobadoMxNum) {
+          precioComiteFinal = valorNegociado!
+          comercialRaw = valorNegociado
+        } else if (valorNegociadoNum > topeAprobadoMxNum) {
+          // Capear al tope
+          precioComiteFinal = topeAprobadoMx!
+          comercialRaw = valorNegociado
+        } else {
+          // No hay valor_negociado, usar tope aprobado
+          precioComiteFinal = topeAprobadoMx!
+          comercialRaw = null // no hubo negociación real, usar HESH
+        }
+      } else if (valorNegociadoNum > 0) {
+        // No hay tope aprobado, pero sí hay valor_negociado
+        // valor_negociado debe ser <= oferta_final_prestamo_mx_calculada
+        if (valorNegociadoNum <= ofertaBaseMxNum) {
+          precioComiteFinal = valorNegociado!
+          comercialRaw = valorNegociado
+        } else {
+          // Capear al precio base
+          precioComiteFinal = ofertaBaseMx || bnpl1Value
+          comercialRaw = valorNegociado
+        }
+      } else {
+        // Sin negociación: precio base
+        precioComiteFinal = ofertaBaseMx || bnpl1Value
+        comercialRaw = null
+      }
+      
       bnpl3Final = '0'
       bnpl6Final = '0'
       bnpl9Final = '0'
@@ -342,6 +401,8 @@ export async function GET(request: NextRequest) {
       bnpl6: bnpl6Final,
       bnpl9: bnpl9Final,
       precio_comite: precioComiteFinal,
+      precio_comite_original: precioComiteOriginal, // precio base sin negociación (CO: precio_comite, MX: oferta_final_prestamo_mx_calculada)
+      bnpl_1_comercial_raw: comercialRaw, // valor crudo para saber si el comercial negocio (CO: bnpl_1_comercial, MX: valor_negociado)
       whatsapp_asesor: properties.whatsapp_asesor,
       nombre_del_conjunto: properties.nombre_del_conjunto || null,
       area_construida: properties.area_construida || null,
@@ -351,6 +412,10 @@ export async function GET(request: NextRequest) {
       tipo_inmueble_id: properties.tipo_inmueble_id || null,
       negocio_aplica_para_bnpl: negocioAplicaBnpl,
       razon_de_venta: properties.razon_de_venta_usuario_gabi_mx || null,
+      valor_subsidiado: valorSubsidiadoValue || null,
+      valor_subsidiado_extraordinario: parseHubSpotNumber(properties.valor_subsidiado_extraordinario) || null,
+      subsidio_aprobado_lider: properties.subsidio_aprobado_lider || null,
+      subsidio_aprobado_director: properties.subsidio_aprobado_director || null,
     }
     
     return NextResponse.json(result, { headers })

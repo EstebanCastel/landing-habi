@@ -38,11 +38,15 @@ function HelpIcon({ title }: { title: string }) {
 interface LiquiditySectionProps {
   configuration: HabiConfiguration;
   valorMercado: number;
+  currentPrice?: number;
+  costBreakdown?: { comision: { total: number }; gastosMensuales: { total: number }; tarifaServicio: { total: number }; tramites: { total: number }; remodelacion: { total: number } } | null;
+  bnplPrices?: { precio_comite?: string | null; precio_comite_original?: string | null; country?: string | null } | null;
 }
 
-export default function LiquiditySection({ configuration, valorMercado }: LiquiditySectionProps) {
-  // Calcular la oferta Habi
+export default function LiquiditySection({ configuration, valorMercado, currentPrice, costBreakdown, bnplPrices }: LiquiditySectionProps) {
+  // Oferta Habi = precio actual de compra (currentPrice si está disponible, sino cálculo por fórmula)
   const ofertaHabi = useMemo(() => {
+    if (currentPrice && currentPrice > 0) return currentPrice;
     let precioBase = valorMercado * 0.782;
     if (configuration.tramites === 'cliente') {
       precioBase += (valorMercado * COSTOS_PERCENTAGES.tramites) / 100;
@@ -51,7 +55,23 @@ export default function LiquiditySection({ configuration, valorMercado }: Liquid
       precioBase += (valorMercado * COSTOS_PERCENTAGES.remodelacion) / 100;
     }
     return precioBase;
-  }, [valorMercado, configuration]);
+  }, [valorMercado, configuration, currentPrice]);
+
+  // Evaluación del inmueble = precio_comite_ORIGINAL + todos los costos HESH
+  const evaluacionInmueble = useMemo(() => {
+    const precioComiteOrig = bnplPrices?.precio_comite_original || bnplPrices?.precio_comite;
+    if (costBreakdown && precioComiteOrig) {
+      const precioComite = Number(precioComiteOrig || 0);
+      const totalCostos =
+        (costBreakdown.comision?.total || 0) +
+        (costBreakdown.gastosMensuales?.total || 0) +
+        (costBreakdown.tarifaServicio?.total || 0) +
+        (costBreakdown.tramites?.total || 0) +
+        (costBreakdown.remodelacion?.total || 0);
+      return precioComite + totalCostos;
+    }
+    return valorMercado;
+  }, [costBreakdown, bnplPrices, valorMercado]);
 
   const [amountNeeded, setAmountNeeded] = useState<number>(0);
   const [selectedCredit, setSelectedCredit] = useState<number>(0);
@@ -85,7 +105,7 @@ export default function LiquiditySection({ configuration, valorMercado }: Liquid
     const totalPayment = monthlyPayment * loanTermMonths;
     const totalInterest = totalPayment - amountNeeded;
 
-    const habiCost = valorMercado - ofertaHabi;
+    const habiCost = evaluacionInmueble - ofertaHabi;
     const creditCost = totalInterest;
     const savings = creditCost - habiCost;
 
@@ -116,7 +136,7 @@ export default function LiquiditySection({ configuration, valorMercado }: Liquid
         </div>
         <div>
           <h3 className="text-lg font-bold text-gray-900">Simulador de Liquidez</h3>
-          <p className="text-sm text-gray-500">Compara créditos vs vender con Habi</p>
+          <p className="text-sm text-gray-500">Compara créditos vs vender con {bnplPrices?.country === 'MX' ? 'Tu Habi' : 'Habi'}</p>
         </div>
       </div>
 
@@ -126,7 +146,7 @@ export default function LiquiditySection({ configuration, valorMercado }: Liquid
         <div className="mb-6">
           <h4 className="text-base font-semibold text-gray-900 mb-2">¿Necesitas liquidez inmediata?</h4>
           <p className="text-sm text-gray-600">
-            Compara el costo real de solicitar un crédito vs vender tu inmueble con Habi.
+            Compara el costo real de solicitar un crédito vs vender tu inmueble con {bnplPrices?.country === 'MX' ? 'Tu Habi' : 'Habi'}.
           </p>
         </div>
 
@@ -285,7 +305,7 @@ export default function LiquiditySection({ configuration, valorMercado }: Liquid
             </div>
 
             <div className="flex items-center justify-between mb-4 mt-1">
-              <h4 className="text-xs uppercase tracking-widest font-bold text-purple-700">Vender con Habi</h4>
+              <h4 className="text-xs uppercase tracking-widest font-bold text-purple-700">Vender con {bnplPrices?.country === 'MX' ? 'Tu Habi' : 'Habi'}</h4>
               <div className="w-8 h-8 bg-purple-200 rounded-full flex items-center justify-center">
                 <svg className="w-4 h-4 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path
@@ -301,15 +321,15 @@ export default function LiquiditySection({ configuration, valorMercado }: Liquid
             <div className="space-y-3">
               <div className="flex justify-between items-center py-2 border-b border-purple-200">
                 <span className="text-sm text-gray-600">Valor de mercado</span>
-                <span className="font-semibold text-gray-900">{formatPrice(valorMercado)}</span>
+                <span className="font-semibold text-gray-900">{formatPrice(Math.round(evaluacionInmueble))}</span>
               </div>
               <div className="flex justify-between items-center py-2 border-b border-purple-200">
-                <span className="text-sm text-gray-600">Oferta Habi</span>
-                <span className="font-semibold text-purple-700">{formatPrice(ofertaHabi)}</span>
+                <span className="text-sm text-gray-600">Oferta {bnplPrices?.country === 'MX' ? 'Tu Habi' : 'Habi'}</span>
+                <span className="font-semibold text-purple-700">{formatPrice(Math.round(ofertaHabi))}</span>
               </div>
               <div className="flex justify-between items-center py-2 border-b border-purple-200">
                 <span className="text-sm text-gray-600">Recibes en</span>
-                <span className="font-semibold text-green-600">7-15 días</span>
+                <span className="font-semibold text-green-600">2-4 semanas*</span>
               </div>
               <div className="flex justify-between items-center py-2 border-b border-purple-200">
                 <span className="text-sm text-gray-600">Total que recibes</span>
@@ -334,7 +354,7 @@ export default function LiquiditySection({ configuration, valorMercado }: Liquid
           }`}
         >
           <p className="text-xs uppercase tracking-widest font-semibold text-gray-500 mb-2">
-            {calculations.savings > 0 ? 'Con Habi te ahorras' : 'Diferencia'}
+            {calculations.savings > 0 ? `Con ${bnplPrices?.country === 'MX' ? 'Tu Habi' : 'Habi'} te ahorras` : 'Diferencia'}
           </p>
           <p className={`text-4xl font-black mb-2 ${calculations.savings > 0 ? 'text-purple-700' : 'text-gray-800'}`}>
             {formatPrice(Math.abs(Math.round(calculations.savings)))}
@@ -347,6 +367,11 @@ export default function LiquiditySection({ configuration, valorMercado }: Liquid
               : 'sin diferencia'}
           </p>
         </div>
+
+        {/* Nota del asterisco */}
+        <p className="text-xs text-gray-400 mt-3">
+          * Sujeto a tiempos de trámites asociados al inmueble y a la entrega de documentos necesarios.
+        </p>
       </div>
     </div>
   );

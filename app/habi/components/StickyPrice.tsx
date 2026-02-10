@@ -11,6 +11,7 @@ interface StickyPriceProps {
   donationAmount?: number;
   onHabiClick?: () => void;
   evaluacionInmueble?: number;
+  whatsappAsesor?: string;
 }
 
 export default function StickyPrice({ 
@@ -21,7 +22,8 @@ export default function StickyPrice({
   precioCuentaPropia = 0,
   donationAmount = 0,
   onHabiClick,
-  evaluacionInmueble: _evaluacionInmueble
+  evaluacionInmueble: _evaluacionInmueble,
+  whatsappAsesor
 }: StickyPriceProps) {
   // Determinar precio y texto según modalidad (ya con donación descontada)
   const getContent = () => {
@@ -89,6 +91,11 @@ export default function StickyPrice({
             </button>
           )}
           <button 
+            onClick={() => {
+              if (whatsappAsesor) {
+                window.open(whatsappAsesor.startsWith('http') ? whatsappAsesor : `https://wa.me/${whatsappAsesor.replace(/[^\d]/g, '')}`, '_blank');
+              }
+            }}
             className={`flex-1 sm:flex-none px-6 py-2.5 rounded-lg font-medium transition text-sm ${
               modalidad === 'cuenta_propia' 
                 ? 'bg-gray-100 text-gray-700 hover:bg-gray-200'

@@ -8,16 +8,28 @@ interface NavbarProps {
 }
 
 export default function Navbar({ activeCountry = 'CO' }: NavbarProps) {
+  const isMx = activeCountry === 'MX';
+
   return (
     <nav className="bg-white py-2 px-3 md:py-3 md:px-8">
       <div className="max-w-7xl mx-auto flex items-center justify-between">
-        <Image
-          src="/habilogo.jpg"
-          alt="Habi"
-          width={80}
-          height={32}
-          className="h-8 w-auto"
-        />
+        {isMx ? (
+          <Image
+            src="/tuhabi.svg"
+            alt="Tu Habi"
+            width={80}
+            height={32}
+            className="h-8 w-auto"
+          />
+        ) : (
+          <Image
+            src="/habilogo.jpg"
+            alt="Habi"
+            width={80}
+            height={32}
+            className="h-8 w-auto"
+          />
+        )}
         
         {/* Country: CO | MX — el activo según pipeline en negrilla */}
         <div className="flex items-center gap-2 text-sm">

@@ -100,17 +100,17 @@ const getComponentProps = (
       };
       
     case 'ComparablesSection': {
-      // Evaluación = precio_comite (HubSpot) + todos los costos del desglose HESH
+      // Evaluación = precio_comite_ORIGINAL (HubSpot) + todos los costos del desglose HESH
       let evaluacion = props.currentPrice;
       if (props.bnplPrices && props.costBreakdown) {
-        const precioComite = Number(props.bnplPrices.precio_comite || 0);
+        const precioComiteOrig = Number(props.bnplPrices.precio_comite_original || props.bnplPrices.precio_comite || 0);
         const totalCostos =
           props.costBreakdown.comision.total +
           props.costBreakdown.gastosMensuales.total +
           props.costBreakdown.tarifaServicio.total +
           props.costBreakdown.tramites.total +
           props.costBreakdown.remodelacion.total;
-        evaluacion = Math.round(precioComite + totalCostos);
+        evaluacion = Math.round(precioComiteOrig + totalCostos);
       }
       return {
         onSectionRef: refCallback,
@@ -146,6 +146,9 @@ const getComponentProps = (
       return {
         configuration: props.configuration,
         valorMercado: props.valorMercado,
+        currentPrice: props.currentPrice,
+        costBreakdown: props.costBreakdown,
+        bnplPrices: props.bnplPrices,
       };
       
     case 'HabiDirectSection':

@@ -189,6 +189,20 @@ function HomeContent() {
     }
   }, [bnplPrices, configuration.formaPago]);
 
+  // Actualizar título de página y favicon según país (CO = Habi, MX = TuHabi)
+  useEffect(() => {
+    if (!bnplPrices) return;
+    const isMx = bnplPrices.country === 'MX';
+    
+    document.title = isMx ? 'TuHabi | Vende tu inmueble' : 'Habi | Vende tu inmueble';
+    
+    // Actualizar favicon
+    const link = document.querySelector("link[rel~='icon']") as HTMLLinkElement | null;
+    if (link) {
+      link.href = isMx ? '/tuhabi.svg' : '/habilogo.jpg';
+    }
+  }, [bnplPrices?.country]);
+
   // Estado de donación
   const [selectedDonation, setSelectedDonation] = useState('');
   const [donationAmount, setDonationAmount] = useState(0);
@@ -963,6 +977,7 @@ function HomeContent() {
         donationAmount={donationAmount}
         onHabiClick={() => setModalidadVenta('habi')}
         evaluacionInmueble={costBreakdown ? Math.round(costBreakdown.askPrice) : undefined}
+        whatsappAsesor={bnplPrices?.whatsapp_asesor}
       />
 
       {/* Asistente de IA flotante */}

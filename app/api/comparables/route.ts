@@ -76,7 +76,7 @@ WITH ranked AS (
       ON hp.id = pc.history_pricing_id
   LEFT JOIN \`papyrus-data-mx.habi_wh_priority.habi_db_property_deal\` ni
       ON ni.property_id = hp.property_id
-  WHERE ni.nid = @nid
+  WHERE CAST(ni.nid AS STRING) = @nid
     AND pc.portal_pricing_flag IN (70, 71, 72)
 )
 SELECT * FROM ranked WHERE comp_rank_date = 1 LIMIT 1
@@ -263,9 +263,12 @@ export async function GET(request: NextRequest) {
     
     console.log(`[Comparables] Fetching for nid=${nid}, country=${country}`)
     
+    // MX: nid como string (CAST en query), CO: nid como int
+    const params = country === 'MX' ? { nid: nid } : { nid: parseInt(nid) }
+    
     const [rows] = await client.query({
       query,
-      params: { nid: parseInt(nid) },
+      params,
       location: 'US',
     })
     

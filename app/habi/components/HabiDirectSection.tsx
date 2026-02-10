@@ -82,14 +82,14 @@ function PricingSummary({
   const paymentOption = PAYMENT_OPTIONS.find(opt => opt.id === configuration.formaPago);
   const numCuotas = configuration.formaPago === 'contado' ? 1 : parseInt(configuration.formaPago);
 
-  // Costos para el desglose - usar HESH si disponible
+  // Costos fijos - usar HESH si disponible (estos NUNCA cambian)
   const comisionTotal = costBreakdown
     ? costBreakdown.comision.total
     : (valorMercado * COSTOS_PERCENTAGES.comisionTotal) / 100;
   const propertyMensual = costBreakdown
     ? costBreakdown.gastosMensuales.total
     : (valorMercado * COSTOS_PERCENTAGES.propertyMensual) / 100;
-  const gananciaHabi = costBreakdown
+  const gananciaHabiHesh = costBreakdown
     ? costBreakdown.tarifaServicio.total
     : valorMercado * 0.05;
   const costosTramites = configuration.tramites === 'habi' 
@@ -103,19 +103,34 @@ function PricingSummary({
     ? (currentPrice * paymentOption.percentage) / 100
     : 0;
   
-  // Valor de mercado = evaluación = precio_comite + todos los costos
-  const precioComiteNum = bnplPrices ? Number(bnplPrices.precio_comite || 0) : 0;
-  const evaluacionInmueble = costBreakdown && precioComiteNum > 0
-    ? precioComiteNum + comisionTotal + propertyMensual + gananciaHabi +
+  // Evaluación del inmueble = precio_comite_ORIGINAL + TODOS los costos HESH (constante)
+  // Siempre usa el precio del comité original (no el negociado) para la evaluación
+  const precioComiteOriginal = bnplPrices
+    ? Number(bnplPrices.precio_comite_original || bnplPrices.precio_comite || 0)
+    : 0;
+  const evaluacionInmueble = costBreakdown && precioComiteOriginal > 0
+    ? precioComiteOriginal + comisionTotal + propertyMensual + gananciaHabiHesh +
       (costBreakdown.tramites.total) + (costBreakdown.remodelacion.total)
     : valorMercado;
+
+  // Tarifa de servicio: condicional según si el comercial negoció
+  // Si bnpl_1_comercial_raw existe → recalcular como residual
+  // Si no existe → usar valor HESH fijo
+  const hayComercial = bnplPrices?.bnpl_1_comercial_raw != null;
+  const costosFijos = comisionTotal + propertyMensual +
+    (costBreakdown ? costBreakdown.tramites.total : (valorMercado * COSTOS_PERCENTAGES.tramites) / 100) +
+    (costBreakdown ? costBreakdown.remodelacion.total : (valorMercado * COSTOS_PERCENTAGES.remodelacion) / 100);
+  
+  const gananciaHabi = hayComercial && costBreakdown
+    ? Math.max(0, evaluacionInmueble - currentPrice - costosFijos)
+    : gananciaHabiHesh;
 
   const comisionPctSummary = evaluacionInmueble > 0
     ? ((comisionTotal / evaluacionInmueble) * 100).toFixed(1)
     : COSTOS_PERCENTAGES.comisionTotal.toString();
-  const utilidadPctSummary = costBreakdown
-    ? (costBreakdown.tarifaServicio.utilidadEsperada * 100).toFixed(1)
-    : '5';
+  const utilidadPctSummary = evaluacionInmueble > 0 && hayComercial && costBreakdown
+    ? ((gananciaHabi / evaluacionInmueble) * 100).toFixed(1)
+    : (costBreakdown ? (costBreakdown.tarifaServicio.utilidadEsperada * 100).toFixed(1) : '5');
 
   return (
     <div id="cta-final-section" className="px-6 py-6 bg-white border-t border-gray-200">
@@ -232,7 +247,14 @@ function PricingSummary({
       )}
 
       {/* Botones */}
-      <button className="w-full bg-purple-600 text-white py-4 rounded-lg font-medium hover:bg-purple-700 transition mb-3">
+      <button 
+        onClick={() => {
+          if (whatsappAsesor) {
+            window.open(whatsappAsesor.startsWith('http') ? whatsappAsesor : `https://wa.me/${whatsappAsesor.replace(/[^\d]/g, '')}`, '_blank');
+          }
+        }}
+        className="w-full bg-purple-600 text-white py-4 rounded-lg font-medium hover:bg-purple-700 transition mb-3"
+      >
         Continuar con la venta
       </button>
 
@@ -271,6 +293,7 @@ export default function HabiDirectSection({
   bnplPrices,
 }: HabiDirectSectionProps) {
   const [showExpenseCalculator, setShowExpenseCalculator] = useState(false);
+  const isMx = bnplPrices?.country === 'MX';
   
   // Precio final con donación descontada
   const finalPrice = currentPrice - donationAmount;
@@ -278,7 +301,7 @@ export default function HabiDirectSection({
     return `$ ${Math.round(price).toLocaleString('es-CO')}`;
   };
 
-  // Usar valores reales de HESH si están disponibles, sino fallback a porcentajes
+  // Costos fijos de HESH (nunca cambian)
   const comisionTotal = costBreakdown
     ? costBreakdown.comision.total
     : (valorMercado * COSTOS_PERCENTAGES.comisionTotal) / 100;
@@ -295,11 +318,26 @@ export default function HabiDirectSection({
     ? costBreakdown.tramites.total
     : (valorMercado * COSTOS_PERCENTAGES.tramites) / 100;
   
-  const gananciaHabi = costBreakdown
+  const gananciaHabiHesh = costBreakdown
     ? costBreakdown.tarifaServicio.total
     : valorMercado * 0.05;
 
-  // Calcular porcentajes reales si hay HESH data
+  // Evaluación del inmueble (constante) = precio_comite_ORIGINAL + todos los costos HESH
+  const precioComiteOriginalMain = bnplPrices
+    ? Number(bnplPrices.precio_comite_original || bnplPrices.precio_comite || 0)
+    : 0;
+  const evaluacionMain = costBreakdown && precioComiteOriginalMain > 0
+    ? precioComiteOriginalMain + comisionTotal + propertyMensual + gananciaHabiHesh + costosTramites + costosRemodelacion
+    : valorMercado;
+
+  // Tarifa de servicio: residual si el comercial negoció, fija si no
+  const hayComercialMain = bnplPrices?.bnpl_1_comercial_raw != null;
+  const costosFijosMain = comisionTotal + propertyMensual + costosTramites + costosRemodelacion;
+  const gananciaHabi = hayComercialMain && costBreakdown
+    ? Math.max(0, evaluacionMain - currentPrice - costosFijosMain)
+    : gananciaHabiHesh;
+
+  // Calcular porcentajes reales
   const askPrice = costBreakdown?.askPrice || valorMercado;
   const comisionPct = costBreakdown
     ? ((costBreakdown.comision.total / askPrice) * 100).toFixed(1)
@@ -313,9 +351,9 @@ export default function HabiDirectSection({
   const tramitesPct = costBreakdown
     ? ((costBreakdown.tramites.total / askPrice) * 100).toFixed(1)
     : COSTOS_PERCENTAGES.tramites.toString();
-  const utilidadPct = costBreakdown
-    ? (costBreakdown.tarifaServicio.utilidadEsperada * 100).toFixed(1)
-    : '5';
+  const utilidadPct = evaluacionMain > 0 && hayComercialMain && costBreakdown
+    ? ((gananciaHabi / evaluacionMain) * 100).toFixed(1)
+    : (costBreakdown ? (costBreakdown.tarifaServicio.utilidadEsperada * 100).toFixed(1) : '5');
 
   return (
     <>
@@ -323,14 +361,14 @@ export default function HabiDirectSection({
       <div id="configurator-section" className="p-6 bg-white border-b border-gray-200">
         <h3 className="text-xl font-bold mb-2">Así se construye tu oferta</h3>
         <p className="text-sm text-gray-600 mb-6">
-          Elige qué quieres que Habi se encargue y cómo prefieres recibir tu dinero.
+          Elige qué quieres que {isMx ? 'Tu Habi' : 'Habi'} se encargue y cómo prefieres recibir tu dinero.
         </p>
 
         <div className="space-y-4">
           {/* Comisión */}
           <div className="flex justify-between items-start pb-3 border-b border-gray-100">
             <div className="flex-1">
-              <p className="font-medium text-sm mb-2">Comisión Habi</p>
+              <p className="font-medium text-sm mb-2">Comisión {isMx ? 'Tu Habi' : 'Habi'}</p>
               <p className="text-xs text-gray-600 mb-1">
                 Comisión total del <strong>{comisionPct}%</strong>.
               </p>
@@ -353,14 +391,16 @@ export default function HabiDirectSection({
               </p>
               <p className="text-xs text-gray-500 mb-2">
                 Estos gastos existen incluso si vendes por tu cuenta.<br />
-                Habi los asume por ti desde el inicio.
+                {isMx ? 'Tu Habi' : 'Habi'} los asume por ti desde el inicio.
               </p>
-              <button
-                onClick={() => setShowExpenseCalculator(true)}
-                className="text-xs text-purple-600 font-medium hover:text-purple-700 transition"
-              >
-                Ver más →
-              </button>
+              {!isMx && (
+                <button
+                  onClick={() => setShowExpenseCalculator(true)}
+                  className="text-xs text-purple-600 font-medium hover:text-purple-700 transition"
+                >
+                  Ver más →
+                </button>
+              )}
             </div>
             <div className="text-right ml-4">
               <p className="font-semibold">{formatPrice(propertyMensual)}</p>
@@ -371,9 +411,9 @@ export default function HabiDirectSection({
           {/* Tarifa de servicio Habi */}
           <div className="flex justify-between items-start pb-3 border-b border-gray-100">
             <div className="flex-1">
-              <p className="font-medium text-sm mb-2">Tarifa de servicio Habi</p>
+              <p className="font-medium text-sm mb-2">Tarifa de servicio {isMx ? 'Tu Habi' : 'Habi'}</p>
               <p className="text-xs text-gray-600 mb-1">
-                Habi obtiene una ganancia del <strong>{utilidadPct}%</strong> sobre el valor de venta del inmueble.
+                {isMx ? 'Tu Habi' : 'Habi'} obtiene una ganancia del <strong>{utilidadPct}%</strong> sobre el valor de venta del inmueble.
               </p>
             </div>
             <div className="text-right ml-4">
@@ -442,7 +482,7 @@ export default function HabiDirectSection({
                 }`}
               >
                 <div className="flex items-center justify-between mb-1">
-                  <span className="font-medium">Habi se encarga</span>
+                  <span className="font-medium">{isMx ? 'Tu Habi' : 'Habi'} se encarga</span>
                   {configuration.tramites === 'habi' && (
                     <span className="text-sm text-purple-600">✓</span>
                   )}
@@ -516,7 +556,7 @@ export default function HabiDirectSection({
                 }`}
               >
                 <div className="flex items-center justify-between mb-1">
-                  <span className="font-medium">Habi se encarga</span>
+                  <span className="font-medium">{isMx ? 'Tu Habi' : 'Habi'} se encarga</span>
                   {configuration.remodelacion === 'habi' && (
                     <span className="text-sm text-purple-600">✓</span>
                   )}
