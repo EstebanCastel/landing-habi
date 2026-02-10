@@ -160,29 +160,49 @@ function transformComparablesCO(comparableJson: any): any[] {
 function transformComparablesMX(comparableJson: any): any[] {
   if (!comparableJson) return []
   
-  // El JSON de BQ tiene formato { "field": { "0": value, "1": value, ... } }
-  const keys = Object.keys(comparableJson.comparable_id || comparableJson.area || {})
+  // El JSON de BQ MX tiene formato { "field": { "0": value, "1": value, ... } }
+  // Los nombres de campos varían entre flags (70/71/72):
+  // - Flag 72: id, built_area, parking, bathroom, norm_price_m2, etc.
+  // - Flag 70: comparable_id, area, garage, banos, price_per_m2, etc.
+  const keys = Object.keys(
+    comparableJson.id || comparableJson.comparable_id || 
+    comparableJson.built_area || comparableJson.area || 
+    comparableJson.address || {}
+  )
   
-  // Deduplicar por comparable_id
+  if (keys.length === 0) return []
+  
+  // Deduplicar por id/comparable_id
   const uniqueMap = new Map<string, Record<string, unknown>>()
   
   keys.forEach((key) => {
-    const comparableId = String(comparableJson.comparable_id?.[key] || key)
+    const comparableId = String(
+      comparableJson.comparable_id?.[key] || comparableJson.id?.[key] || key
+    )
     if (uniqueMap.has(comparableId)) return
     
-    const area = String(comparableJson.area?.[key] || '')
-    const banos = String(comparableJson.banos?.[key] || '0')
-    const garajes = String(comparableJson.garage?.[key] || '0')
+    // Área: built_area (flag 72) o area (flag 70)
+    const area = String(comparableJson.built_area?.[key] || comparableJson.area?.[key] || '')
+    // Baños: bathroom (flag 72) o banos (flag 70)
+    const banos = String(comparableJson.bathroom?.[key] || comparableJson.banos?.[key] || '0')
+    // Garajes: parking (flag 72) o garage (flag 70)
+    const garajes = String(comparableJson.parking?.[key] || comparableJson.garage?.[key] || '0')
+    // Habitaciones: room_num (flag 70) - flag 72 no siempre lo tiene
     const habitaciones = String(comparableJson.room_num?.[key] || '-')
     
-    // MX ya tiene features construidos
+    // Features construidos o generar
     const features = comparableJson.features?.[key] || `${area}m² ・ ${habitaciones} Hab. ・ ${banos} Baños ・ ${garajes} Est.`
     
-    // Nivel de confianza (MX lo tiene en confidence_levels)
+    // Nivel de confianza
     const confidenceLevel = comparableJson.confidence_levels?.[key] || 'media_confianza'
     
-    // Categoría (MX lo tiene en comparable_category)
+    // Categoría
     const category = comparableJson.comparable_category?.[key] || 'zona'
+    
+    // Precio: norm_price_m2 o price_per_m2
+    const valormt2 = parseFloat(String(
+      comparableJson.norm_price_m2?.[key] || comparableJson.price_per_m2?.[key] || '0'
+    ))
     
     uniqueMap.set(comparableId, {
       id: key,
@@ -190,8 +210,8 @@ function transformComparablesMX(comparableJson: any): any[] {
       latitude: parseFloat(String(comparableJson.latitude?.[key] || '0')),
       longitude: parseFloat(String(comparableJson.longitude?.[key] || '0')),
       area: area,
-      lastAskPrice: parseFloat(String(comparableJson.last_ask_price?.[key] || '0')),
-      valormt2: parseFloat(String(comparableJson.price_per_m2?.[key] || comparableJson.norm_price_m2?.[key] || '0')),
+      lastAskPrice: parseFloat(String(comparableJson.last_ask_price?.[key] || comparableJson.norm_price?.[key] || '0')),
+      valormt2: valormt2,
       features: features,
       address: comparableJson.address?.[key] || comparableJson.full_address?.[key] || '',
       condominium: null,
@@ -202,7 +222,7 @@ function transformComparablesMX(comparableJson: any): any[] {
       habitaciones: habitaciones,
       confidenceLevel: confidenceLevel,
       category: category,
-      propertyType: comparableJson.property_type?.[key] || null,
+      propertyType: comparableJson.property_type?.[key] || comparableJson.property_type_id?.[key] || null,
       // Campos extra de BQ
       nombre: comparableJson.name?.[key] || null,
       telefono: comparableJson.phone?.[key] || null,
@@ -214,24 +234,50 @@ function transformComparablesMX(comparableJson: any): any[] {
 }
 
 /**
+ * Extrae el primer valor de un campo que puede ser:
+ * - Un valor directo (string/number): "19.86" o 19.86
+ * - Un objeto pandas-like: {"0": "19.86"} 
+ * Retorna el valor como string, o el fallback
+ */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function extractFirstValue(field: any, fallback: string = ''): string {
+  if (field == null) return fallback
+  if (typeof field === 'string' || typeof field === 'number') return String(field)
+  if (typeof field === 'object') {
+    // Formato pandas: {"0": "value", "1": "value2", ...}
+    const keys = Object.keys(field)
+    if (keys.length > 0) {
+      const val = field[keys[0]]
+      if (val == null || val === 'None' || val === 'nan') return fallback
+      return String(val)
+    }
+  }
+  return fallback
+}
+
+/**
  * Transforma original_data de BQ al formato InmuebleData del frontend
+ * Soporta tanto formato CO (valores directos) como MX (formato pandas {"field": {"0": "value"}})
  */
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 function transformInmueble(originalData: any): any {
   if (!originalData) return null
   
+  const lat = parseFloat(extractFirstValue(originalData.latitud || originalData.latitude, '0'))
+  const lng = parseFloat(extractFirstValue(originalData.longitud || originalData.longitude, '0'))
+  
   return {
-    nid: String(originalData.nid || ''),
-    area: String(originalData.area || ''),
-    garage: String(originalData.garajes ?? originalData.garage ?? '0'),
-    bathroom: String(originalData.banos ?? originalData.bathroom ?? '0'),
-    latitude: parseFloat(String(originalData.latitud || originalData.latitude || '0')),
-    longitude: parseFloat(String(originalData.longitud || originalData.longitude || '0')),
-    floor_num: String(originalData.num_piso || originalData.floor_num || ''),
-    years_old: String(originalData.anos_antiguedad || originalData.vetustez || originalData.years_old || ''),
-    last_ask_price: parseFloat(String(originalData.last_ask_price || '0')),
-    property_type_id: String(originalData.tipo_inmueble_id || originalData.property_type_id || '1'),
-    habitaciones: String(originalData.num_habitaciones || ''),
+    nid: extractFirstValue(originalData.nid),
+    area: extractFirstValue(originalData.area),
+    garage: extractFirstValue(originalData.garajes ?? originalData.garage, '0'),
+    bathroom: extractFirstValue(originalData.banos ?? originalData.bath ?? originalData.bathroom, '0'),
+    latitude: isNaN(lat) ? 0 : lat,
+    longitude: isNaN(lng) ? 0 : lng,
+    floor_num: extractFirstValue(originalData.num_piso || originalData.floor_num),
+    years_old: extractFirstValue(originalData.anos_antiguedad || originalData.vetustez || originalData.years_old),
+    last_ask_price: parseFloat(extractFirstValue(originalData.last_ask_price, '0')),
+    property_type_id: extractFirstValue(originalData.tipo_inmueble_id || originalData.property_type_id, '1'),
+    habitaciones: extractFirstValue(originalData.num_habitaciones),
   }
 }
 
@@ -262,15 +308,22 @@ export async function GET(request: NextRequest) {
     const query = country === 'MX' ? COMPARABLES_QUERY_MX : COMPARABLES_QUERY_CO
     
     console.log(`[Comparables] Fetching for nid=${nid}, country=${country}`)
+    console.log(`[Comparables] Query project: ${country === 'MX' ? 'papyrus-data-mx' : 'papyrus-data'}`)
     
     // MX: nid como string (CAST en query), CO: nid como int
     const params = country === 'MX' ? { nid: nid } : { nid: parseInt(nid) }
+    
+    console.log(`[Comparables] Executing BigQuery with params:`, JSON.stringify(params))
+    const startTime = Date.now()
     
     const [rows] = await client.query({
       query,
       params,
       location: 'US',
+      timeoutMs: 30000, // 30s timeout
     })
+    
+    console.log(`[Comparables] BigQuery completed in ${Date.now() - startTime}ms, rows: ${rows?.length ?? 0}`)
     
     if (!rows || rows.length === 0) {
       console.log(`[Comparables] No results found for nid=${nid}`)
@@ -289,6 +342,7 @@ export async function GET(request: NextRequest) {
       comparableData = typeof row.comparable === 'string' 
         ? JSON.parse(row.comparable) 
         : row.comparable
+      console.log(`[Comparables] Data keys: ${Object.keys(comparableData || {}).slice(0, 10).join(', ')}`)
     } catch (e) {
       console.error('Error parsing comparable JSON:', e)
       return NextResponse.json(
@@ -325,10 +379,13 @@ export async function GET(request: NextRequest) {
       country,
     }, { headers })
     
-  } catch (error) {
-    console.error('BigQuery error:', error)
+  } catch (error: unknown) {
+    const errorMsg = error instanceof Error ? error.message : String(error)
+    const errorStack = error instanceof Error ? error.stack : ''
+    console.error(`[Comparables] ERROR: ${errorMsg}`)
+    console.error(`[Comparables] Stack: ${errorStack}`)
     return NextResponse.json(
-      { error: 'Internal server error fetching comparables', details: String(error) },
+      { error: 'Internal server error fetching comparables', details: errorMsg },
       { status: 500, headers }
     )
   }

@@ -137,10 +137,13 @@ export default function ComparablesMap({
 
   // Inicializar mapa
   useEffect(() => {
-    if (!mapRef.current || mapInstanceRef.current) return;
+    if (!mapRef.current || mapInstanceRef.current || !inmueble) return;
+    const lat = Number(inmueble.latitude);
+    const lng = Number(inmueble.longitude);
+    if (isNaN(lat) || isNaN(lng)) return;
 
     const map = L.map(mapRef.current, {
-      center: [inmueble.latitude, inmueble.longitude],
+      center: [lat, lng],
       zoom: 16,
       zoomControl: false
     });
