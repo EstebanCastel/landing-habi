@@ -316,12 +316,12 @@ export async function GET(request: NextRequest) {
     console.log(`[Comparables] Executing BigQuery with params:`, JSON.stringify(params))
     const startTime = Date.now()
     
-    const [rows] = await client.query({
+    const queryResult = await client.query({
       query,
       params,
       location: 'US',
-      timeoutMs: 30000, // 30s timeout
     })
+    const rows = queryResult[0]
     
     console.log(`[Comparables] BigQuery completed in ${Date.now() - startTime}ms, rows: ${rows?.length ?? 0}`)
     
