@@ -1,6 +1,7 @@
 'use client';
 
 import AnimatedPrice from './AnimatedPrice';
+import { analytics } from '../../lib/analytics';
 
 interface StickyPriceProps {
   currentPrice: number;
@@ -12,6 +13,7 @@ interface StickyPriceProps {
   onHabiClick?: () => void;
   evaluacionInmueble?: number;
   whatsappAsesor?: string;
+  country?: string;
 }
 
 export default function StickyPrice({ 
@@ -23,7 +25,8 @@ export default function StickyPrice({
   donationAmount = 0,
   onHabiClick,
   evaluacionInmueble: _evaluacionInmueble,
-  whatsappAsesor
+  whatsappAsesor,
+  country
 }: StickyPriceProps) {
   // Determinar precio y texto según modalidad (ya con donación descontada)
   const getContent = () => {
@@ -92,6 +95,7 @@ export default function StickyPrice({
           )}
           <button 
             onClick={() => {
+              analytics.ctaClick('continuar_venta', 'sticky_price', country);
               if (whatsappAsesor) {
                 window.open(whatsappAsesor.startsWith('http') ? whatsappAsesor : `https://wa.me/${whatsappAsesor.replace(/[^\d]/g, '')}`, '_blank');
               }

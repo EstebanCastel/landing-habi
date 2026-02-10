@@ -2,6 +2,7 @@
 
 import { HabiConfiguration, PAYMENT_OPTIONS, COSTOS_PERCENTAGES } from '../../types/habi';
 import type { HubSpotProperties } from '../../lib/hubspot';
+import { analytics } from '../../lib/analytics';
 
 interface PaymentOptionsProps {
   configuration: HabiConfiguration;
@@ -90,7 +91,10 @@ export default function PaymentOptions({ configuration, setConfiguration, valorM
           return (
             <button
               key={option.id}
-              onClick={() => setConfiguration({ ...configuration, formaPago: option.id })}
+              onClick={() => {
+                setConfiguration({ ...configuration, formaPago: option.id });
+                analytics.paymentOptionSelected(option.id, displayPrice, bnplPrices?.country);
+              }}
               className={`w-full text-left p-4 rounded-lg border transition-all ${
                 isSelected
                   ? 'border-purple-300 bg-gradient-to-br from-purple-50 to-transparent'

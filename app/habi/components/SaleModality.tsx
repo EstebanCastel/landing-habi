@@ -2,6 +2,7 @@
 
 import { useState, useRef, useEffect } from 'react';
 import Modal from './Modal';
+import { analytics } from '../../lib/analytics';
 
 type Modalidad = 'habi' | 'inmobiliaria' | 'cuenta_propia';
 type ModalView = 'features' | 'compare';
@@ -11,6 +12,7 @@ interface SaleModalityProps {
   setModalidadVenta: (modalidad: Modalidad) => void;
   onSectionRef?: (ref: HTMLDivElement | null) => void;
   availableModalities?: Modalidad[]; // Permite configurar cuáles modalidades mostrar
+  country?: string;
 }
 
 const TABS = [
@@ -336,7 +338,7 @@ function GalleryDual({ images }: { images: string[] }) {
   );
 }
 
-export default function SaleModality({ modalidadVenta, setModalidadVenta, onSectionRef, availableModalities }: SaleModalityProps) {
+export default function SaleModality({ modalidadVenta, setModalidadVenta, onSectionRef, availableModalities, country }: SaleModalityProps) {
   const [showModal, setShowModal] = useState(false);
   const [modalView, setModalView] = useState<ModalView>('features');
   const [modalTab, setModalTab] = useState<Modalidad>(modalidadVenta);
@@ -391,7 +393,7 @@ export default function SaleModality({ modalidadVenta, setModalidadVenta, onSect
         {filteredTabs.map((tab) => (
           <button
             key={tab.id}
-            onClick={() => setModalidadVenta(tab.id)}
+            onClick={() => { setModalidadVenta(tab.id); analytics.saleModalitySelected(tab.id, country); }}
             className={`flex-1 py-4 text-sm font-medium transition-all border-b-2 -mb-[2px] ${
               modalidadVenta === tab.id
                 ? 'text-gray-900 border-gray-900'

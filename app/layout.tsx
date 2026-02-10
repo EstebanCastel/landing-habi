@@ -1,4 +1,8 @@
 import type { Metadata } from "next";
+import { Suspense } from "react";
+import GoogleAnalytics from "./components/google-analytics";
+import SegmentScript from "./components/segment-analytics";
+import PageViewTracker from "./components/page-view-tracker";
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -17,6 +21,11 @@ export default function RootLayout({
   return (
     <html lang="es">
       <body>
+        <GoogleAnalytics />
+        <SegmentScript />
+        <Suspense fallback={null}>
+          <PageViewTracker />
+        </Suspense>
         {children}
       </body>
     </html>

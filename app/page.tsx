@@ -11,6 +11,7 @@ import StickyPrice from './habi/components/StickyPrice';
 import AIAssistant from './habi/components/AIAssistant';
 import { HabiConfiguration, PAYMENT_OPTIONS, COSTOS_PERCENTAGES } from './types/habi';
 import { getHubSpotProperties, type HubSpotProperties } from './lib/hubspot';
+import { analytics, initScrollTracking, initPageTimeTracking } from './lib/analytics';
 import type { HeshCostBreakdown } from './api/hesh/route';
 import sectionsConfig from './config/sections.json';
 import type { LandingConfig } from './config/componentsRegistry';
@@ -154,13 +155,16 @@ function HomeContent() {
       if (data) {
         setBnplPrices(data);
         // Actualizar precios basados en HubSpot
-        const bnpl9Num = Number(data.bnpl9 || 0);
-        const valorMercado = bnpl9Num > 0 ? bnpl9Num : Number(data.precio_comite || DEFAULT_PROPERTY_DATA.valorMercado);
+        const bnbl9Num = Number(data.bnpl9 || 0);
+        const valorMercado = bnbl9Num > 0 ? bnbl9Num : Number(data.precio_comite || DEFAULT_PROPERTY_DATA.valorMercado);
         setPrecioInmobiliaria(valorMercado);
         setPrecioCuentaPropia(valorMercado);
+        // Analytics: HubSpot cargado exitosamente
+        analytics.hubspotLoaded(dealUuid, data.country || 'CO');
       } else {
-        // HubSpot falló o no devolvió datos → usar fallback estático para comparables
+        // HubSpot falló o no devolvió datos
         setHubspotFailed(true);
+        analytics.hubspotError(dealUuid, 'no_data_returned');
       }
       setHubspotLoading(false);
     };
@@ -202,6 +206,20 @@ function HomeContent() {
       link.href = isMx ? '/tuhabi.svg' : '/habilogo.jpg';
     }
   }, [bnplPrices?.country]);
+
+  // ─── Analytics: pageview, scroll depth, tiempo en página ───
+  useEffect(() => {
+    const country = bnplPrices?.country ?? 'CO';
+    analytics.pageView(dealUuid ? `offer_${dealUuid}` : 'home', { dealUuid: dealUuid || undefined, country });
+
+    const cleanupScroll = initScrollTracking();
+    const cleanupPageTime = initPageTimeTracking();
+
+    return () => {
+      if (cleanupScroll) cleanupScroll();
+      if (cleanupPageTime) cleanupPageTime();
+    };
+  }, [dealUuid, bnplPrices?.country]);
 
   // Estado de donación
   const [selectedDonation, setSelectedDonation] = useState('');
@@ -248,6 +266,7 @@ function HomeContent() {
           
           if (data.comparables && data.comparables.length > 0) {
             setComparables(data.comparables);
+            analytics.dataLoaded('comparables', 'CO', nid);
           }
         }
         
@@ -256,6 +275,7 @@ function HomeContent() {
           const heshData = await heshRes.json();
           if (heshData.costBreakdown) {
             setCostBreakdown(heshData.costBreakdown);
+            analytics.dataLoaded('hesh', 'CO', nid);
           }
         }
         
@@ -282,6 +302,7 @@ function HomeContent() {
           console.log('[MX HESH] costBreakdown received:', heshData.costBreakdown ? 'yes' : 'no');
           if (heshData.costBreakdown) {
             setCostBreakdown(heshData.costBreakdown);
+            analytics.dataLoaded('hesh', 'MX', nid);
           }
         }
         
@@ -291,6 +312,7 @@ function HomeContent() {
           console.log('[MX Comparables] count:', comparablesData.comparables?.length || 0);
           if (comparablesData.comparables && comparablesData.comparables.length > 0) {
             setComparables(comparablesData.comparables);
+            analytics.dataLoaded('comparables', 'MX', nid);
           }
           if (comparablesData.inmueble) {
             setInmueble(comparablesData.inmueble);
@@ -978,6 +1000,7 @@ function HomeContent() {
         onHabiClick={() => setModalidadVenta('habi')}
         evaluacionInmueble={costBreakdown ? Math.round(costBreakdown.askPrice) : undefined}
         whatsappAsesor={bnplPrices?.whatsapp_asesor}
+        country={bnplPrices?.country}
       />
 
       {/* Asistente de IA flotante */}

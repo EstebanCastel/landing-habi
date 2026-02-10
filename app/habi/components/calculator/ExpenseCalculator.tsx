@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useRef } from 'react';
+import { analytics } from '../../../lib/analytics';
 // CSS importado globalmente desde globals.css para asegurar prioridad sobre Tailwind
 
 // Custom HelpIcon component
@@ -277,13 +278,15 @@ interface ExpenseCalculatorProps {
   initialAdministration?: number;
   habiOfferValue?: number;
   bnpl9Value?: number; // Para mostrar la gráfica de comparación solo si hay BNPL
+  country?: string;
 }
 
 export default function ExpenseCalculator({ 
   initialPropertyValue = 0,
   initialAdministration = 0,
   habiOfferValue = 0,
-  bnpl9Value = 0
+  bnpl9Value = 0,
+  country
 }: ExpenseCalculatorProps) {
   const [propertyValue, setPropertyValue] = useState(initialPropertyValue > 0 ? initialPropertyValue.toString() : "");
   const [administrationValue, setAdministrationValue] = useState(initialAdministration > 0 ? initialAdministration.toString() : "");
@@ -414,9 +417,11 @@ export default function ExpenseCalculator({
 
   const handleCalculate = () => {
     setShowResults(true);
+    analytics.calculatorResultsViewed(undefined, country);
   };
 
   const handleNewCalculation = () => {
+    analytics.calculatorReset(country);
     setShowResults(false);
     setPropertyValue("");
     setAdministrationValue("");

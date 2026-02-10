@@ -1,10 +1,11 @@
 'use client';
 
-import { useMemo } from 'react';
+import { useMemo, useEffect, useRef, useCallback } from 'react';
 import { getComponent, getVisibleSections, SectionConfig } from '../../config/componentsRegistry';
 import { HabiConfiguration } from '../../types/habi';
 import type { HubSpotProperties } from '../../lib/hubspot';
 import type { HeshCostBreakdown } from '../../api/hesh/route';
+import { analytics } from '../../lib/analytics';
 
 interface Comparable {
   id: string;
@@ -118,6 +119,7 @@ const getComponentProps = (
         selectedComparable: props.selectedComparable,
         onSelectComparable: props.onSelectComparable,
         ofertaHabi: evaluacion,
+        country: props.bnplPrices?.country,
       };
     }
       
@@ -127,6 +129,7 @@ const getComponentProps = (
         setModalidadVenta: props.setModalidadVenta,
         onSectionRef: refCallback,
         availableModalities: section.availableModalities,
+        country: props.bnplPrices?.country,
       };
       
     case 'PersonalAdvisor':
@@ -225,6 +228,30 @@ export default function SectionRenderer(props: SectionRendererProps) {
     return getVisibleSections(sections, { modalidadVenta, bnplEnabled, razonVentaLiquidez });
   }, [sections, modalidadVenta, bnplEnabled, razonVentaLiquidez]);
   
+  // ─── Analytics: trackear secciones visibles en viewport ───
+  const trackedSectionsRef = useRef<Set<string>>(new Set());
+  const country = bnplPrices?.country ?? 'CO';
+
+  const sectionRefCallback = useCallback((node: HTMLDivElement | null, sectionId: string) => {
+    if (!node) return;
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting && !trackedSectionsRef.current.has(sectionId)) {
+          trackedSectionsRef.current.add(sectionId);
+          analytics.sectionViewed(sectionId, country);
+          observer.disconnect();
+        }
+      },
+      { threshold: 0.3 }
+    );
+    observer.observe(node);
+  }, [country]);
+
+  // Reset tracked sections cuando cambia el deal
+  useEffect(() => {
+    trackedSectionsRef.current.clear();
+  }, [props.bnplPrices?.nid]);
+
   return (
     <div className="pb-24">
       {visibleSections.map((section) => {
@@ -237,7 +264,11 @@ export default function SectionRenderer(props: SectionRendererProps) {
         
         const componentProps = getComponentProps(section, props);
         
-        return <Component key={section.id} {...componentProps} />;
+        return (
+          <div key={section.id} ref={(node) => sectionRefCallback(node, section.id)} data-section={section.id} data-country={country}>
+            <Component {...componentProps} />
+          </div>
+        );
       })}
     </div>
   );

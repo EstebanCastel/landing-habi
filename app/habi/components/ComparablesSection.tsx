@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
+import { analytics } from '../../lib/analytics';
 
 interface Comparable {
   id: string;
@@ -28,6 +29,7 @@ interface ComparablesSectionProps {
   selectedComparable: Comparable | null;
   onSelectComparable: (comparable: Comparable | null) => void;
   ofertaHabi?: number; // Precio de oferta que Habi hace al cliente
+  country?: string;
 }
 
 const ITEMS_PER_PAGE = 4;
@@ -37,7 +39,8 @@ export default function ComparablesSection({
   comparables,
   selectedComparable,
   onSelectComparable,
-  ofertaHabi = 0
+  ofertaHabi = 0,
+  country
 }: ComparablesSectionProps) {
   const sectionRef = useRef<HTMLDivElement>(null);
   
@@ -215,9 +218,11 @@ export default function ComparablesSection({
         {getCurrentPageItems().map((comparable) => (
           <button
             key={comparable.nid}
-            onClick={() => onSelectComparable(
-              selectedComparable?.nid === comparable.nid ? null : comparable
-            )}
+            onClick={() => {
+              const isSelecting = selectedComparable?.nid !== comparable.nid;
+              onSelectComparable(isSelecting ? comparable : null);
+              if (isSelecting) analytics.comparableSelected(comparable.nid, country);
+            }}
             className={`w-full p-3 rounded-xl border text-left transition-all ${
               selectedComparable?.nid === comparable.nid
                 ? 'border-purple-300 bg-purple-50'

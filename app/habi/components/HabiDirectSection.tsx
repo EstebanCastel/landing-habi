@@ -8,6 +8,7 @@ import Modal from './Modal';
 import ExpenseCalculator from './calculator/ExpenseCalculator';
 import type { HeshCostBreakdown } from '../../api/hesh/route';
 import type { HubSpotProperties } from '../../lib/hubspot';
+import { analytics } from '../../lib/analytics';
 
 interface HabiDirectSectionProps {
   configuration: HabiConfiguration;
@@ -136,7 +137,10 @@ function PricingSummary({
     <div id="cta-final-section" className="px-6 py-6 bg-white border-t border-gray-200">
       {/* Toggle de detalles */}
       <button 
-        onClick={() => setShowDetails(!showDetails)}
+        onClick={() => {
+          setShowDetails(!showDetails);
+          analytics.pricingSummaryToggled(!showDetails, bnplPrices?.country);
+        }}
         className="w-full flex items-center justify-center gap-2 text-sm text-gray-600 hover:text-gray-900 mb-4"
       >
         <span>{showDetails ? 'Ocultar detalles' : 'Ver detalles de precio'}</span>
@@ -249,6 +253,7 @@ function PricingSummary({
       {/* Botones */}
       <button 
         onClick={() => {
+          analytics.ctaClick('continuar_venta', 'habi_direct_primary', bnplPrices?.country);
           if (whatsappAsesor) {
             window.open(whatsappAsesor.startsWith('http') ? whatsappAsesor : `https://wa.me/${whatsappAsesor.replace(/[^\d]/g, '')}`, '_blank');
           }
@@ -260,6 +265,7 @@ function PricingSummary({
 
       <button 
         onClick={() => {
+          analytics.ctaClick('hablar_asesor', 'habi_direct_secondary', bnplPrices?.country);
           if (whatsappAsesor) {
             window.open(whatsappAsesor.startsWith('http') ? whatsappAsesor : `https://wa.me/${whatsappAsesor.replace(/[^\d]/g, '')}`, '_blank');
           }
@@ -395,7 +401,7 @@ export default function HabiDirectSection({
               </p>
               {!isMx && (
                 <button
-                  onClick={() => setShowExpenseCalculator(true)}
+                  onClick={() => { setShowExpenseCalculator(true); analytics.calculatorOpened(bnplPrices?.country); }}
                   className="text-xs text-purple-600 font-medium hover:text-purple-700 transition"
                 >
                   Ver más →
@@ -474,7 +480,7 @@ export default function HabiDirectSection({
 
             <div className="space-y-3">
               <button
-                onClick={() => setConfiguration({ ...configuration, tramites: 'habi' })}
+                onClick={() => { setConfiguration({ ...configuration, tramites: 'habi' }); analytics.costToggleChanged('tramites', 'habi', bnplPrices?.country); }}
                 className={`w-full text-left px-4 py-3 rounded-lg border transition-all ${
                   configuration.tramites === 'habi'
                     ? 'border-purple-200 bg-gradient-to-br from-purple-50 to-transparent'
@@ -493,7 +499,7 @@ export default function HabiDirectSection({
               </button>
 
               <button
-                onClick={() => setConfiguration({ ...configuration, tramites: 'cliente' })}
+                onClick={() => { setConfiguration({ ...configuration, tramites: 'cliente' }); analytics.costToggleChanged('tramites', 'cliente', bnplPrices?.country); }}
                 className={`w-full text-left px-4 py-3 rounded-lg border transition-all ${
                   configuration.tramites === 'cliente'
                     ? 'border-purple-200 bg-gradient-to-br from-purple-50 to-transparent'
@@ -548,7 +554,7 @@ export default function HabiDirectSection({
 
             <div className="space-y-3">
               <button
-                onClick={() => setConfiguration({ ...configuration, remodelacion: 'habi' })}
+                onClick={() => { setConfiguration({ ...configuration, remodelacion: 'habi' }); analytics.costToggleChanged('remodelacion', 'habi', bnplPrices?.country); }}
                 className={`w-full text-left px-4 py-3 rounded-lg border transition-all ${
                   configuration.remodelacion === 'habi'
                     ? 'border-purple-200 bg-gradient-to-br from-purple-50 to-transparent'
@@ -567,7 +573,7 @@ export default function HabiDirectSection({
               </button>
 
               <button
-                onClick={() => setConfiguration({ ...configuration, remodelacion: 'cliente' })}
+                onClick={() => { setConfiguration({ ...configuration, remodelacion: 'cliente' }); analytics.costToggleChanged('remodelacion', 'cliente', bnplPrices?.country); }}
                 className={`w-full text-left px-4 py-3 rounded-lg border transition-all ${
                   configuration.remodelacion === 'cliente'
                     ? 'border-purple-200 bg-gradient-to-br from-purple-50 to-transparent'
@@ -603,7 +609,7 @@ export default function HabiDirectSection({
       )}
 
       {/* Asesor Personal */}
-      <PersonalAdvisor whatsappAsesor={whatsappAsesor} />
+      <PersonalAdvisor whatsappAsesor={whatsappAsesor} country={bnplPrices?.country} />
 
       {/* Donación */}
       {showDonation && (
@@ -638,6 +644,7 @@ export default function HabiDirectSection({
             initialPropertyValue={valorMercado}
             habiOfferValue={currentPrice}
             bnpl9Value={bnplPrices?.bnpl9 ? Number(bnplPrices.bnpl9) : 0}
+            country={bnplPrices?.country}
           />
         </div>
       </Modal>

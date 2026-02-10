@@ -1,6 +1,7 @@
 'use client';
 
 import Image from 'next/image';
+import { analytics } from '../../lib/analytics';
 
 // Número por defecto de soporte Habi Colombia (no usar número personal)
 const DEFAULT_WHATSAPP_NUMBER = '';
@@ -15,12 +16,14 @@ const DEFAULT_ADVISOR = {
 
 interface PersonalAdvisorProps {
   whatsappAsesor?: string;
+  country?: string;
 }
 
-export default function PersonalAdvisor({ whatsappAsesor }: PersonalAdvisorProps) {
+export default function PersonalAdvisor({ whatsappAsesor, country }: PersonalAdvisorProps) {
   const advisorName = DEFAULT_ADVISOR.name;
 
   const handleWhatsAppClick = () => {
+    analytics.whatsappClick('personal_advisor', country);
     if (whatsappAsesor) {
       // Si ya es una URL completa de WhatsApp, usarla directamente
       if (whatsappAsesor.startsWith('http')) {
