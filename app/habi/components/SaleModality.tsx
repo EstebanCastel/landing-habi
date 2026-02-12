@@ -22,7 +22,7 @@ const TABS = [
     badge: 'Recomendado',
     badgeStyle: 'bg-purple-100 text-purple-700',
     title: 'Venta directa a Habi',
-    description: 'Te compramos tu inmueble directamente. Sin publicar, sin visitas de extraños, sin negociaciones eternas. Recibe tu dinero en días, no en meses.',
+    description: 'Recibe una oferta por tu inmueble. Sin publicar, sin visitas de extraños, sin negociaciones eternas.',
     icon: (
       <svg className="w-6 h-6 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M13 10V3L4 14h7v7l9-11h-7z" />
@@ -63,9 +63,9 @@ const COMPARISON_OPTIONS = [
     id: 'habi' as Modalidad,
     title: 'Compra directa',
     subtitle: 'Venta inmediata',
-    highlight: '7-15 días',
+    highlight: '2-4 semanas*',
     highlightLabel: 'Tiempo de venta',
-    tagline: 'Liquidez inmediata',
+    tagline: 'Oferta directa',
   },
   {
     id: 'inmobiliaria' as Modalidad,
@@ -355,11 +355,14 @@ export default function SaleModality({ modalidadVenta, setModalidadVenta, onSect
         ...tab,
         label: isMx ? 'TuHabi te compra' : 'Habi te compra',
         title: `Venta directa a ${brandName}`,
-        description: `Te compramos tu inmueble directamente. Sin publicar, sin visitas de extraños, sin negociaciones eternas. Recibe tu dinero en días, no en meses.`,
+        description: 'Recibe una oferta por tu inmueble. Sin publicar, sin visitas de extraños, sin negociaciones eternas.',
       };
     }
     return tab;
   });
+
+  // Aplicar branding a comparison options según país
+  const brandedComparisonOptions = COMPARISON_OPTIONS;
 
   // Filtrar tabs según availableModalities (si se proporciona)
   const filteredTabs = availableModalities 
@@ -367,8 +370,8 @@ export default function SaleModality({ modalidadVenta, setModalidadVenta, onSect
     : brandedTabs;
   
   const filteredComparisonOptions = availableModalities
-    ? COMPARISON_OPTIONS.filter(opt => availableModalities.includes(opt.id))
-    : COMPARISON_OPTIONS;
+    ? brandedComparisonOptions.filter(opt => availableModalities.includes(opt.id))
+    : brandedComparisonOptions;
   
   // Filtrar modalidades para el modal
   const availableModalitiesForModal = availableModalities || (['habi', 'inmobiliaria', 'cuenta_propia'] as Modalidad[]);
@@ -561,6 +564,9 @@ export default function SaleModality({ modalidadVenta, setModalidadVenta, onSect
                   </button>
                 ))}
               </div>
+              <p className="text-[10px] text-gray-400 mt-3 px-1">
+                * Sujeto a los gravámenes y situación legal del inmueble.
+              </p>
             </div>
           )}
 

@@ -73,6 +73,8 @@ export default function LiquiditySection({ configuration, valorMercado, currentP
     return valorMercado;
   }, [costBreakdown, bnplPrices, valorMercado]);
 
+  // Default: 50% del valor de evaluación del inmueble
+  const defaultAmount = useMemo(() => Math.round(evaluacionInmueble / 2), [evaluacionInmueble]);
   const [amountNeeded, setAmountNeeded] = useState<number>(0);
   const [selectedCredit, setSelectedCredit] = useState<number>(0);
   const [loanTermMonths, setLoanTermMonths] = useState<number>(24);
@@ -162,7 +164,7 @@ export default function LiquiditySection({ configuration, valorMercado, currentP
               <input
                 type="text"
                 value={amountNeeded > 0 ? `$ ${amountNeeded.toLocaleString('es-CO')}` : ''}
-                placeholder="Ej: $10.000.000"
+                placeholder={`Ej: $${defaultAmount.toLocaleString('es-CO')}`}
                 onChange={(e) => {
                   const value = parseInt(e.target.value.replace(/\D/g, '')) || 0;
                   setAmountNeeded(Math.min(value, ofertaHabi));

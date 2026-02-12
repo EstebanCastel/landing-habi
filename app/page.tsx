@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useRef, useCallback, Suspense } from 'react';
+import { useState, useEffect, useRef, useCallback, useMemo, Suspense } from 'react';
 import dynamic from 'next/dynamic';
 import Image from 'next/image';
 import { useSearchParams, usePathname } from 'next/navigation';
@@ -97,6 +97,15 @@ function HomeContent() {
   
   // Datos de costos HESH (desglose real)
   const [costBreakdown, setCostBreakdown] = useState<HeshCostBreakdown | null>(null);
+
+  // MX: solo mostrar percentil 50 inferior en el mapa
+  const mapComparables = useMemo(() => {
+    if (bnplPrices?.country === 'MX' && comparables.length > 0) {
+      const sorted = [...comparables].sort((a, b) => a.lastAskPrice - b.lastAskPrice);
+      return sorted.slice(0, Math.ceil(sorted.length / 2));
+    }
+    return comparables;
+  }, [comparables, bnplPrices?.country]);
   
   // Configuración de la oferta
   // tramites/remodelacion default 'habi' = Habi se encarga (secciones de toggle deshabilitadas por ahora)
@@ -708,7 +717,7 @@ function HomeContent() {
           <div 
             className={`absolute inset-0 transition-opacity duration-500 ${activeSection === 'comparables' ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}
           >
-            {inmueble && comparables.length > 0 && (
+            {inmueble && mapComparables.length > 0 && (
               <ComparablesMap
                 inmueble={{
                   latitude: inmueble.latitude,
@@ -716,7 +725,7 @@ function HomeContent() {
                   area: inmueble.area,
                   price: inmueble.last_ask_price
                 }}
-                comparables={comparables}
+                comparables={mapComparables}
                 selectedComparable={selectedComparable}
                 onSelectComparable={setSelectedComparable}
               />
@@ -890,7 +899,7 @@ function HomeContent() {
               ${activeSection === 'comparables' ? 'opacity-100' : 'opacity-0 pointer-events-none'}
             `}
           >
-            {inmueble && comparables.length > 0 && (
+            {inmueble && mapComparables.length > 0 && (
               <ComparablesMap
                 inmueble={{
                   latitude: inmueble.latitude,
@@ -898,7 +907,7 @@ function HomeContent() {
                   area: inmueble.area,
                   price: inmueble.last_ask_price
                 }}
-                comparables={comparables}
+                comparables={mapComparables}
                 selectedComparable={selectedComparable}
                 onSelectComparable={setSelectedComparable}
               />
