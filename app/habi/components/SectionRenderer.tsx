@@ -98,6 +98,7 @@ const getComponentProps = (
       return {
         propertyData: props.propertyData,
         onSectionRef: refCallback,
+        country: props.bnplPrices?.country,
       };
       
     case 'ComparablesSection': {

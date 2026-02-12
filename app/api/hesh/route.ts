@@ -310,8 +310,8 @@ function buildCostBreakdownMX(unit: Record<string, any>, row: Record<string, any
     },
     
     gastosMensuales: {
-      total: predial + serviciosPublicos + aseo + mantenimiento + administracion,
-      mantenimiento: mantenimiento + aseo,
+      total: predial + serviciosPublicos + mantenimiento + administracion, // aseo movido a remodelación
+      mantenimiento,
       serviciosPublicos,
       administracion: administracion + predial,
     },
@@ -338,9 +338,9 @@ function buildCostBreakdownMX(unit: Record<string, any>, row: Record<string, any
     },
     
     remodelacion: {
-      total: costosRemo > 0 ? costosRemo : (pintura + mejoras),
+      total: (costosRemo > 0 ? costosRemo : (pintura + mejoras)) + aseo, // aseo sumado aquí
       pintura,
-      mejoras,
+      mejoras: mejoras + aseo,
     },
   }
 }

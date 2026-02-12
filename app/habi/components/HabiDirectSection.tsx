@@ -175,7 +175,7 @@ function PricingSummary({
           </div>
           {costosTramites > 0 && (
             <div className="flex justify-between text-sm">
-              <span className="text-gray-600">Trámites y notarías</span>
+              <span className="text-gray-600">{isMx ? 'Costos operativos' : 'Trámites y notarías'}</span>
               <span className="text-gray-600">- {formatPrice(costosTramites)}</span>
             </div>
           )}
@@ -328,6 +328,9 @@ export default function HabiDirectSection({
     ? costBreakdown.tarifaServicio.total
     : valorMercado * 0.05;
 
+  // Periodo estimado de venta en meses (para MX, basado en AMS del HESH)
+  const periodoMeses = Math.ceil((costBreakdown?.tarifaServicio.ams || 90) / 30);
+
   // Evaluación del inmueble (constante) = precio_comite_ORIGINAL + todos los costos HESH
   const precioComiteOriginalMain = bnplPrices
     ? Number(bnplPrices.precio_comite_original || bnplPrices.precio_comite || 0)
@@ -392,20 +395,31 @@ export default function HabiDirectSection({
           <div className="flex justify-between items-start pb-3 border-b border-gray-100">
             <div className="flex-1">
               <p className="font-medium text-sm mb-2">Gastos mensuales del inmueble</p>
-              <p className="text-xs text-gray-600 mb-1">
-                Administración y servicios del inmueble durante el proceso de venta.
-              </p>
-              <p className="text-xs text-gray-500 mb-2">
-                Estos gastos existen incluso si vendes por tu cuenta.<br />
-                {isMx ? 'TuHabi' : 'Habi'} los asume por ti desde el inicio.
-              </p>
-              {!isMx && (
-                <button
-                  onClick={() => { setShowExpenseCalculator(true); analytics.calculatorOpened(bnplPrices?.country); }}
-                  className="text-xs text-purple-600 font-medium hover:text-purple-700 transition"
-                >
-                  Ver más →
-                </button>
+              {isMx ? (
+                <>
+                  <p className="text-xs text-gray-600 mb-1">
+                    Monto total correspondiente al periodo estimado de venta ({periodoMeses} meses).
+                  </p>
+                  <p className="text-xs text-gray-500 mb-2">
+                    Este cobro se realiza por adelantado y refleja los gastos que asumirías durante ese tiempo.
+                  </p>
+                </>
+              ) : (
+                <>
+                  <p className="text-xs text-gray-600 mb-1">
+                    Administración y servicios del inmueble durante el proceso de venta.
+                  </p>
+                  <p className="text-xs text-gray-500 mb-2">
+                    Estos gastos existen incluso si vendes por tu cuenta.<br />
+                    Habi los asume por ti desde el inicio.
+                  </p>
+                  <button
+                    onClick={() => { setShowExpenseCalculator(true); analytics.calculatorOpened(bnplPrices?.country); }}
+                    className="text-xs text-purple-600 font-medium hover:text-purple-700 transition"
+                  >
+                    Ver más →
+                  </button>
+                </>
               )}
             </div>
             <div className="text-right ml-4">
@@ -428,12 +442,16 @@ export default function HabiDirectSection({
             </div>
           </div>
 
-          {/* Trámites y notarías - Informativo */}
+          {/* Trámites y notarías / Costos operativos */}
           <div className="flex justify-between items-start pb-3 border-b border-gray-100">
             <div className="flex-1">
-              <p className="font-medium text-sm mb-2">Trámites y notarías</p>
+              <p className="font-medium text-sm mb-2">
+                {isMx ? 'Costos operativos' : 'Trámites y notarías'}
+              </p>
               <p className="text-xs text-gray-600 mb-1">
-                Gastos legales y notariales asociados a la compraventa del inmueble.
+                {isMx
+                  ? 'Gastos operativos asociados al proceso de compra del inmueble.'
+                  : 'Gastos legales y notariales asociados a la compraventa del inmueble.'}
               </p>
             </div>
             <div className="text-right ml-4">

@@ -43,10 +43,19 @@ export default function ComparablesSection({
   country
 }: ComparablesSectionProps) {
   const sectionRef = useRef<HTMLDivElement>(null);
+  const isMx = country === 'MX';
+
+  // Ordenar comparables de menor a mayor precio
+  const sortedComparables = [...comparables].sort((a, b) => a.lastAskPrice - b.lastAskPrice);
+
+  // MX: solo mostrar percentil 50 inferior (la mitad más barata)
+  const displayComparables = isMx
+    ? sortedComparables.slice(0, Math.ceil(sortedComparables.length / 2))
+    : sortedComparables;
   
   // Estado para paginación
   const [currentPage, setCurrentPage] = useState(0);
-  const totalPages = Math.ceil(comparables.length / ITEMS_PER_PAGE);
+  const totalPages = Math.ceil(displayComparables.length / ITEMS_PER_PAGE);
 
   // Reportar la ref al padre
   useEffect(() => {
@@ -55,20 +64,20 @@ export default function ComparablesSection({
     }
   }, [onSectionRef]);
 
-  // Calcular estadísticas
+  // Calcular estadísticas basadas en los comparables visibles
   const stats = {
-    count: comparables.length,
-    avgPrice: comparables.length > 0 
-      ? comparables.reduce((sum, c) => sum + c.lastAskPrice, 0) / comparables.length 
+    count: displayComparables.length,
+    avgPrice: displayComparables.length > 0 
+      ? displayComparables.reduce((sum, c) => sum + c.lastAskPrice, 0) / displayComparables.length 
       : 0,
-    minPrice: comparables.length > 0 
-      ? Math.min(...comparables.map(c => c.lastAskPrice)) 
+    minPrice: displayComparables.length > 0 
+      ? Math.min(...displayComparables.map(c => c.lastAskPrice)) 
       : 0,
-    maxPrice: comparables.length > 0 
-      ? Math.max(...comparables.map(c => c.lastAskPrice)) 
+    maxPrice: displayComparables.length > 0 
+      ? Math.max(...displayComparables.map(c => c.lastAskPrice)) 
       : 0,
-    avgPricePerM2: comparables.length > 0 
-      ? comparables.reduce((sum, c) => sum + c.valormt2, 0) / comparables.length 
+    avgPricePerM2: displayComparables.length > 0 
+      ? displayComparables.reduce((sum, c) => sum + c.valormt2, 0) / displayComparables.length 
       : 0
   };
 
@@ -83,15 +92,12 @@ export default function ComparablesSection({
     const position = ((ofertaHabi - stats.minPrice) / range) * 100;
     return Math.max(5, Math.min(95, position)); // Limitar entre 5% y 95%
   };
-
-  // Ordenar comparables de menor a mayor precio
-  const sortedComparables = [...comparables].sort((a, b) => a.lastAskPrice - b.lastAskPrice);
   
-  // Obtener comparables de la página actual (ya ordenados)
+  // Obtener comparables de la página actual (ya ordenados y filtrados)
   const getCurrentPageItems = () => {
     const start = currentPage * ITEMS_PER_PAGE;
     const end = start + ITEMS_PER_PAGE;
-    return sortedComparables.slice(start, end);
+    return displayComparables.slice(start, end);
   };
 
   // Loading state

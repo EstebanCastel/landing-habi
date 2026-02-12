@@ -12,9 +12,11 @@ interface PropertyInfoProps {
     banos: number;
   };
   onSectionRef?: (ref: HTMLDivElement | null) => void;
+  country?: string;
 }
 
-export default function PropertyInfo({ propertyData, onSectionRef }: PropertyInfoProps) {
+export default function PropertyInfo({ propertyData, onSectionRef, country }: PropertyInfoProps) {
+  const isMx = country === 'MX';
   const sectionRef = useRef<HTMLDivElement>(null);
 
   // Reportar la ref al padre
@@ -33,10 +35,14 @@ export default function PropertyInfo({ propertyData, onSectionRef }: PropertyInf
         <h3 className="text-xl font-bold text-gray-900">Información del inmueble</h3>
       </div>
       
-      {/* Nombre del conjunto */}
+      {/* Nombre del conjunto / Dirección */}
       <div className="mb-4 p-3 bg-white rounded-lg border border-purple-100">
-        <p className="text-sm font-semibold text-gray-900">{propertyData.conjunto}</p>
-        <p className="text-xs text-gray-500">{propertyData.direccion}</p>
+        <p className="text-sm font-semibold text-gray-900">
+          {isMx ? propertyData.direccion : propertyData.conjunto}
+        </p>
+        {!isMx && (
+          <p className="text-xs text-gray-500">{propertyData.direccion}</p>
+        )}
       </div>
 
       {/* Grid de características */}
@@ -56,7 +62,7 @@ export default function PropertyInfo({ propertyData, onSectionRef }: PropertyInf
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4" />
             </svg>
           </div>
-          <p className="text-lg font-bold text-gray-900">{propertyData.area}</p>
+          <p className="text-lg font-bold text-gray-900">{propertyData.area}{isMx ? '*' : ''}</p>
           <p className="text-xs text-gray-500">Área</p>
         </div>
         <div className="bg-white p-3 rounded-lg border border-gray-100 text-center">
@@ -78,6 +84,13 @@ export default function PropertyInfo({ propertyData, onSectionRef }: PropertyInf
           <p className="text-xs text-gray-500">Baños</p>
         </div>
       </div>
+
+      {/* Nota de área para MX */}
+      {isMx && (
+        <p className="text-xs text-gray-400 mt-3">
+          * El área está sujeta a validaciones de remodelaciones y a la toma de medidas exactas.
+        </p>
+      )}
     </div>
   );
 }
