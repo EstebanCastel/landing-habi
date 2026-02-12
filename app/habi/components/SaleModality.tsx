@@ -13,6 +13,7 @@ interface SaleModalityProps {
   onSectionRef?: (ref: HTMLDivElement | null) => void;
   availableModalities?: Modalidad[]; // Permite configurar cuáles modalidades mostrar
   country?: string;
+  tarifaServicioPct?: string; // Porcentaje real de tarifa de servicio (comisión total)
 }
 
 const TABS = [
@@ -338,7 +339,7 @@ function GalleryDual({ images }: { images: string[] }) {
   );
 }
 
-export default function SaleModality({ modalidadVenta, setModalidadVenta, onSectionRef, availableModalities, country }: SaleModalityProps) {
+export default function SaleModality({ modalidadVenta, setModalidadVenta, onSectionRef, availableModalities, country, tarifaServicioPct }: SaleModalityProps) {
   const [showModal, setShowModal] = useState(false);
   const [modalView, setModalView] = useState<ModalView>('features');
   const [modalTab, setModalTab] = useState<Modalidad>(modalidadVenta);
@@ -360,6 +361,24 @@ export default function SaleModality({ modalidadVenta, setModalidadVenta, onSect
     }
     return tab;
   });
+
+  // Rows dinámicas: porcentaje de comisión real + branding
+  const comisionHabi = tarifaServicioPct ? `${tarifaServicioPct}%` : '4.4%';
+  const dynamicComparisonRows = COMPARISON_ROWS.map(cat => ({
+    ...cat,
+    features: cat.features.map(f => {
+      const newValues = { ...f.values };
+      // Comisión dinámica
+      if (f.name === 'Comisión') {
+        newValues.habi = comisionHabi;
+      }
+      // Branding MX
+      if (isMx && typeof newValues.habi === 'string') {
+        newValues.habi = newValues.habi.replace(/\bHabi\b/g, 'TuHabi');
+      }
+      return { ...f, values: newValues };
+    }),
+  }));
 
   // Aplicar branding a comparison options según país
   const brandedComparisonOptions = COMPARISON_OPTIONS;
@@ -732,7 +751,7 @@ export default function SaleModality({ modalidadVenta, setModalidadVenta, onSect
             <div className="space-y-8 px-6 pb-6">
               {/* Tabla de comparación por categorías - Desktop */}
               <div className="hidden md:block">
-                {COMPARISON_ROWS.map((category) => (
+                {dynamicComparisonRows.map((category) => (
                   <div key={category.category} className="mb-6">
                     <h4 className="text-lg font-bold text-gray-900 mb-4">{category.category}</h4>
                     <div className="space-y-0">
@@ -779,7 +798,7 @@ export default function SaleModality({ modalidadVenta, setModalidadVenta, onSect
                   ))}
                 </div>
                 
-                {COMPARISON_ROWS.map((category) => (
+                {dynamicComparisonRows.map((category) => (
                   <div key={category.category} className="bg-gray-50 rounded-xl p-3">
                     <h4 className="text-xs font-bold text-gray-900 mb-2">{category.category}</h4>
                     <div className="space-y-1">

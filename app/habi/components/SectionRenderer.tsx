@@ -124,14 +124,33 @@ const getComponentProps = (
       };
     }
       
-    case 'SaleModality':
+    case 'SaleModality': {
+      // Calcular el porcentaje real de tarifa de servicio para mostrarlo en la comparación
+      let tarifaServicioPct = '5';
+      if (props.costBreakdown && props.bnplPrices) {
+        const precioOrig = Number(props.bnplPrices.precio_comite_original || props.bnplPrices.precio_comite || 0);
+        const cb = props.costBreakdown;
+        const costosFijos = cb.comision.total + cb.gastosMensuales.total + cb.tramites.total + cb.remodelacion.total;
+        const evaluacion = precioOrig > 0
+          ? precioOrig + costosFijos + cb.tarifaServicio.total
+          : 0;
+        const hayComercial = props.bnplPrices.bnpl_1_comercial_raw != null;
+        if (hayComercial && evaluacion > 0 && props.currentPrice > 0) {
+          const ganancia = Math.max(0, evaluacion - props.currentPrice - costosFijos);
+          tarifaServicioPct = ((ganancia / evaluacion) * 100).toFixed(1);
+        } else {
+          tarifaServicioPct = (cb.tarifaServicio.utilidadEsperada * 100).toFixed(1);
+        }
+      }
       return {
         modalidadVenta: props.modalidadVenta,
         setModalidadVenta: props.setModalidadVenta,
         onSectionRef: refCallback,
         availableModalities: section.availableModalities,
         country: props.bnplPrices?.country,
+        tarifaServicioPct,
       };
+    }
       
     case 'PersonalAdvisor':
       return {
