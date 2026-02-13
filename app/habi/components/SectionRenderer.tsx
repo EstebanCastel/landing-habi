@@ -106,13 +106,16 @@ const getComponentProps = (
       let evaluacion = props.currentPrice;
       if (props.bnplPrices && props.costBreakdown) {
         const precioComiteOrig = Number(props.bnplPrices.precio_comite_original || props.bnplPrices.precio_comite || 0);
-        const totalCostos =
-          props.costBreakdown.comision.total +
-          props.costBreakdown.gastosMensuales.total +
-          props.costBreakdown.tarifaServicio.total +
-          props.costBreakdown.tramites.total +
-          props.costBreakdown.remodelacion.total;
+        const costos = {
+          comision: props.costBreakdown.comision.total,
+          gastosMensuales: props.costBreakdown.gastosMensuales.total,
+          tarifaServicio: props.costBreakdown.tarifaServicio.total,
+          tramites: props.costBreakdown.tramites.total,
+          remodelacion: props.costBreakdown.remodelacion.total,
+        };
+        const totalCostos = costos.comision + costos.gastosMensuales + costos.tarifaServicio + costos.tramites + costos.remodelacion;
         evaluacion = Math.round(precioComiteOrig + totalCostos);
+        console.log('[Evaluacion]', { precioComiteOrig, ...costos, totalCostos, evaluacion });
       }
       return {
         onSectionRef: refCallback,
