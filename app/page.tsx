@@ -3,16 +3,21 @@
 import { useState, useEffect, useRef, useCallback, useMemo, Suspense } from 'react';
 import dynamic from 'next/dynamic';
 import Image from 'next/image';
+import posthog from 'posthog-js';
 import { useSearchParams, usePathname } from 'next/navigation';
 import AnnouncementBar from './habi/components/AnnouncementBar';
 import Navbar from './habi/components/Navbar';
 import SectionRenderer from './habi/components/SectionRenderer';
 import StickyPrice from './habi/components/StickyPrice';
 import AIAssistant from './habi/components/AIAssistant';
+import LandingB from './landing-b/LandingB';
 import { HabiConfiguration, PAYMENT_OPTIONS, COSTOS_PERCENTAGES } from './types/habi';
 import { getHubSpotProperties, type HubSpotProperties } from './lib/hubspot';
 import { analytics, initScrollTracking, initPageTimeTracking } from './lib/analytics';
 import type { HeshCostBreakdown } from './api/hesh/route';
+import GoogleAnalytics from './components/google-analytics';
+import SegmentScript from './components/segment-analytics';
+import PageViewTracker from './components/page-view-tracker';
 import sectionsConfig from './config/sections.json';
 import type { LandingConfig } from './config/componentsRegistry';
 
@@ -86,6 +91,10 @@ function HomeContent() {
   const [hubspotLoading, setHubspotLoading] = useState(!!dealUuid);
   const [hubspotFailed, setHubspotFailed] = useState(false);
   const [bnplPrices, setBnplPrices] = useState<HubSpotProperties | null>(null);
+  
+  // A/B/C Test state (PostHog Feature Flag)
+  const [abcGroup, setAbcGroup] = useState<string | null>(null);
+  const [abcGroupWritten, setAbcGroupWritten] = useState(false);
   const [showStickyPrice, setShowStickyPrice] = useState(true);
   // Sección activa: 'property' (imagen), 'comparables' (mapa), 'configurator' (imagen config), 'payment' (imagen cuotas), 'donation' (videos), 'other' (fondo neutro)
   const [activeSection, setActiveSection] = useState<'property' | 'comparables' | 'configurator' | 'payment' | 'donation' | 'other'>('property');
@@ -188,6 +197,54 @@ function HomeContent() {
     return () => clearTimeout(timeout);
   }, [dealUuid]);
 
+  // A/B/C Test: PostHog identify + feature flag (solo para Colombia)
+  useEffect(() => {
+    if (!dealUuid || !bnplPrices) return;
+    // Solo aplicar A/B/C test para Colombia
+    const isCO = bnplPrices.country === 'CO' || !bnplPrices.country;
+    if (!isCO) {
+      setAbcGroup('C'); // MX siempre landing modular
+      return;
+    }
+
+    // Identify user with deal_uuid
+    posthog.identify(dealUuid);
+
+    // Get feature flag variant
+    // onFeatureFlags ensures flags are loaded before we read
+    posthog.onFeatureFlags(() => {
+      const variant = posthog.getFeatureFlag('abc-test-landing-co');
+      const group = typeof variant === 'string' ? variant : 'C'; // default to C if flag not configured
+      console.log(`[ABC Test] Deal ${dealUuid} assigned to group: ${group}`);
+      setAbcGroup(group);
+    });
+  }, [dealUuid, bnplPrices]);
+
+  // Write ABC group to HubSpot (once)
+  useEffect(() => {
+    if (!abcGroup || abcGroupWritten || !bnplPrices?.nid) return;
+    
+    const writeGroup = async () => {
+      try {
+        const res = await fetch('/api/hubspot/abc-group', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            dealId: bnplPrices.nid,
+            group: abcGroup,
+          }),
+        });
+        if (res.ok) {
+          setAbcGroupWritten(true);
+          console.log(`[ABC Test] Group ${abcGroup} written to HubSpot for deal ${bnplPrices.nid}`);
+        }
+      } catch (err) {
+        console.error('[ABC Test] Failed to write group to HubSpot:', err);
+      }
+    };
+    writeGroup();
+  }, [abcGroup, abcGroupWritten, bnplPrices?.nid]);
+
   // Ajustar formaPago a 'contado' si BNPL no está disponible
   useEffect(() => {
     if (!bnplPrices) return;
@@ -216,19 +273,27 @@ function HomeContent() {
     }
   }, [bnplPrices?.country]);
 
-  // ─── Analytics: pageview, scroll depth, tiempo en página ───
+  // ─── Analytics: pageview, scroll depth, tiempo en página (ONLY for group C) ───
   useEffect(() => {
+    // Skip analytics for groups A and B
+    if (abcGroup === 'A' || abcGroup === 'B') return;
+
     const country = bnplPrices?.country ?? 'CO';
     analytics.pageView(dealUuid ? `offer_${dealUuid}` : 'home', { dealUuid: dealUuid || undefined, country });
 
     const cleanupScroll = initScrollTracking(country);
     const cleanupPageTime = initPageTimeTracking(country);
 
+    // Enable PostHog session recording for group C
+    if (abcGroup === 'C') {
+      try { posthog.startSessionRecording(); } catch { /* ignore if not available */ }
+    }
+
     return () => {
       if (cleanupScroll) cleanupScroll();
       if (cleanupPageTime) cleanupPageTime();
     };
-  }, [dealUuid, bnplPrices?.country]);
+  }, [dealUuid, bnplPrices?.country, abcGroup]);
 
   // Estado de donación
   const [selectedDonation, setSelectedDonation] = useState('');
@@ -623,8 +688,31 @@ function HomeContent() {
     );
   }
 
+  // A/B/C Test: Render Landing B for groups A and B (Colombia only)
+  if (bnplPrices && (abcGroup === 'A' || abcGroup === 'B')) {
+    return <LandingB properties={bnplPrices} dealUuid={dealUuid} />;
+  }
+
+  // Waiting for ABC group assignment (show loading briefly)
+  if (bnplPrices && !abcGroup && bnplPrices.country === 'CO') {
+    return (
+      <div className="min-h-screen bg-white flex items-center justify-center">
+        <div className="flex flex-col items-center gap-4">
+          <div className="w-10 h-10 border-4 border-purple-200 border-t-purple-600 rounded-full animate-spin" />
+        </div>
+      </div>
+    );
+  }
+
+  // Group C (or MX): Render the modular landing (current)
   return (
     <main className="min-h-screen bg-white flex flex-col">
+      {/* Analytics only for Group C */}
+      <GoogleAnalytics />
+      <SegmentScript />
+      <Suspense fallback={null}>
+        <PageViewTracker />
+      </Suspense>
       {/* Header sticky - AnnouncementBar + Navbar */}
       <div className="sticky top-0 z-50">
         <AnnouncementBar fechaExpiracion={PROPERTY_DATA.fechaExpiracion} />

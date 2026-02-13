@@ -1,0 +1,174 @@
+/* Habi Comparison Styles */
+.habi-comparison-card {
+  background: linear-gradient(135deg, #f8f4ff 0%, #e8d5ff 100%);
+  border: 2px solid #7c01ff;
+  border-radius: 16px;
+  padding: 2rem;
+  box-shadow: 0 8px 24px rgba(124, 1, 255, 0.15);
+}
+
+.comparison-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 2rem;
+  margin-bottom: 2rem;
+}
+
+.comparison-option {
+  background: white;
+  border-radius: 12px;
+  padding: 1.5rem;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.comparison-option:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.15);
+}
+
+.comparison-option.traditional {
+  border-left: 4px solid #059669;
+}
+
+.comparison-option.habi {
+  border-left: 4px solid #7c01ff;
+}
+
+.option-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1rem;
+}
+
+.option-title {
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: #374151;
+  margin: 0;
+}
+
+.option-icon {
+  font-size: 1.5rem;
+}
+
+.option-icon img {
+  width: 32px;
+  height: 30px;
+}
+
+.option-amount {
+  margin-bottom: 1rem;
+}
+
+.amount-label {
+  display: block;
+  font-size: 0.875rem;
+  color: #6b7280;
+  margin-bottom: 0.5rem;
+}
+
+.amount-value {
+  font-size: 1.5rem;
+  font-weight: 700;
+}
+
+.traditional-value {
+  color: #059669;
+}
+
+.habi-value {
+  color: #7c01ff;
+}
+
+.option-details {
+  padding-top: 1rem;
+  border-top: 1px solid #e5e7eb;
+}
+
+.details-text {
+  margin: 0;
+  font-size: 0.875rem;
+  color: #6b7280;
+  font-style: italic;
+}
+
+.comparison-result {
+  background: white;
+  border-radius: 12px;
+  padding: 1.5rem;
+  text-align: center;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.difference-section {
+  margin-bottom: 1rem;
+}
+
+.difference-label {
+  display: block;
+  font-size: 1rem;
+  color: #374151;
+  margin-bottom: 0.5rem;
+  font-weight: 500;
+}
+
+.difference-amount {
+  font-size: 2rem;
+  font-weight: 700;
+  display: block;
+}
+
+.difference-amount.habi-better {
+  color: #7c01ff;
+}
+
+.difference-amount.traditional-better {
+  color: #059669;
+}
+
+.recommendation {
+  padding-top: 1rem;
+  border-top: 1px solid #e5e7eb;
+}
+
+.recommendation-text {
+  margin: 0;
+  font-size: 1rem;
+  color: #374151;
+  font-weight: 500;
+  line-height: 1.5;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+  .habi-comparison-card {
+    padding: 1.5rem;
+  }
+
+  .comparison-grid {
+    grid-template-columns: 1fr;
+    gap: 1.5rem;
+  }
+
+  .comparison-option {
+    padding: 1rem;
+  }
+
+  .option-title {
+    font-size: 1.1rem;
+  }
+
+  .amount-value {
+    font-size: 1.25rem;
+  }
+
+  .difference-amount {
+    font-size: 1.5rem;
+  }
+
+  .recommendation-text {
+    font-size: 0.9rem;
+  }
+}
