@@ -207,17 +207,36 @@ function HomeContent() {
       return;
     }
 
-    // Identify user with deal_uuid
+    // Identify user with deal_uuid, then reload flags for the new distinct_id
     posthog.identify(dealUuid);
+    posthog.reloadFeatureFlags();
 
-    // Get feature flag variant
-    // onFeatureFlags ensures flags are loaded before we read
-    posthog.onFeatureFlags(() => {
+    // Wait for flags to be loaded with the correct distinct_id
+    const handler = () => {
       const variant = posthog.getFeatureFlag('abc-test-landing-co');
-      const group = typeof variant === 'string' ? variant : 'C'; // default to C if flag not configured
-      console.log(`[ABC Test] Deal ${dealUuid} assigned to group: ${group}`);
-      setAbcGroup(group);
-    });
+      console.log(`[ABC Test] PostHog flag raw value:`, variant, `(type: ${typeof variant})`);
+      if (typeof variant === 'string' && ['A', 'B', 'C'].includes(variant)) {
+        console.log(`[ABC Test] Deal ${dealUuid} assigned to group: ${variant}`);
+        setAbcGroup(variant);
+      } else {
+        // Flag not configured yet or returned false - retry once
+        console.warn(`[ABC Test] Flag returned unexpected value: ${variant}. Retrying...`);
+        setTimeout(() => {
+          posthog.reloadFeatureFlags();
+          // Second attempt after reload
+          const retry = posthog.getFeatureFlag('abc-test-landing-co');
+          console.log(`[ABC Test] Retry flag value:`, retry);
+          if (typeof retry === 'string' && ['A', 'B', 'C'].includes(retry)) {
+            setAbcGroup(retry);
+          } else {
+            console.error(`[ABC Test] Flag still not available. Defaulting to C.`);
+            setAbcGroup('C');
+          }
+        }, 2000);
+      }
+    };
+
+    posthog.onFeatureFlags(handler);
   }, [dealUuid, bnplPrices]);
 
   // Write ABC group to HubSpot (once)
@@ -693,8 +712,8 @@ function HomeContent() {
     return <LandingB properties={bnplPrices} dealUuid={dealUuid} />;
   }
 
-  // Waiting for ABC group assignment (show loading briefly)
-  if (bnplPrices && !abcGroup && bnplPrices.country === 'CO') {
+  // Waiting for ABC group assignment (show loading briefly) - CO or undefined country
+  if (bnplPrices && !abcGroup && (bnplPrices.country === 'CO' || !bnplPrices.country)) {
     return (
       <div className="min-h-screen bg-white flex items-center justify-center">
         <div className="flex flex-col items-center gap-4">
