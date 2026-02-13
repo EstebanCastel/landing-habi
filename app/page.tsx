@@ -197,9 +197,12 @@ function HomeContent() {
     return () => clearTimeout(timeout);
   }, [dealUuid]);
 
-  // A/B/C Test: PostHog identify + feature flag (solo para Colombia)
+  // A/B/C Test: Deterministic hash assignment (consistent per UUID)
+  // Uses the same principle as PostHog feature flags: hash(uuid) -> group
+  // This avoids client-side PostHog flag loading issues
   useEffect(() => {
     if (!dealUuid || !bnplPrices) return;
+    
     // Solo aplicar A/B/C test para Colombia
     const isCO = bnplPrices.country === 'CO' || !bnplPrices.country;
     if (!isCO) {
@@ -207,47 +210,34 @@ function HomeContent() {
       return;
     }
 
-    // Identify user with deal_uuid
-    posthog.identify(dealUuid);
-
-    // Use onFeatureFlags callback which receives loaded flags and variants
-    posthog.onFeatureFlags((flags: string[], variants: Record<string, string | boolean>) => {
-      console.log('[ABC Test] All loaded flags:', flags);
-      console.log('[ABC Test] All variants:', JSON.stringify(variants));
-      console.log('[ABC Test] distinct_id:', posthog.get_distinct_id());
-      
-      const variant = variants?.['abc-test-landing-co'];
-      console.log(`[ABC Test] Flag value from variants:`, variant, `(type: ${typeof variant})`);
-      
-      // Also try getFeatureFlag
-      const flagValue = posthog.getFeatureFlag('abc-test-landing-co');
-      console.log(`[ABC Test] getFeatureFlag value:`, flagValue);
-
-      const value = variant || flagValue;
-      
-      if (typeof value === 'string' && ['A', 'B', 'C'].includes(value)) {
-        console.log(`[ABC Test] Deal ${dealUuid} -> group: ${value}`);
-        setAbcGroup(value);
-      } else {
-        console.warn(`[ABC Test] Flag not found in loaded flags. Available flags: ${flags.join(', ')}`);
-        console.warn(`[ABC Test] Reloading flags with distinct_id: ${dealUuid}...`);
-        // Force reload with the identified user
-        posthog.reloadFeatureFlags();
-        setTimeout(() => {
-          const retryVariant = posthog.getFeatureFlag('abc-test-landing-co');
-          console.log(`[ABC Test] After reload - flag value:`, retryVariant);
-          if (typeof retryVariant === 'string' && ['A', 'B', 'C'].includes(retryVariant)) {
-            setAbcGroup(retryVariant);
-          } else {
-            console.error(`[ABC Test] Flag unavailable after retry. Defaulting to C.`);
-            setAbcGroup('C');
-          }
-        }, 3000);
+    // Deterministic hash: same UUID always returns the same group
+    const hashUuid = (uuid: string): number => {
+      let hash = 0;
+      for (let i = 0; i < uuid.length; i++) {
+        const char = uuid.charCodeAt(i);
+        hash = ((hash << 5) - hash) + char;
+        hash |= 0; // Convert to 32-bit integer
       }
-    });
+      return Math.abs(hash);
+    };
 
-    // Also force a reload to ensure flags are fetched with the new distinct_id
-    posthog.reloadFeatureFlags();
+    const groups: ('A' | 'B' | 'C')[] = ['A', 'B', 'C'];
+    const group = groups[hashUuid(dealUuid) % 3];
+    
+    console.log(`[ABC Test] Deal ${dealUuid} -> hash ${hashUuid(dealUuid)} -> group: ${group}`);
+    setAbcGroup(group);
+
+    // Track assignment in PostHog for analytics
+    try {
+      posthog.identify(dealUuid);
+      posthog.capture('abc_test_assigned', {
+        group,
+        deal_uuid: dealUuid,
+        country: 'CO',
+      });
+    } catch (e) {
+      console.warn('[ABC Test] PostHog tracking failed:', e);
+    }
   }, [dealUuid, bnplPrices]);
 
   // Write ABC group to HubSpot (once)
