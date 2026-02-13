@@ -242,7 +242,7 @@ function HomeContent() {
 
   // Write ABC group to HubSpot (once)
   useEffect(() => {
-    if (!abcGroup || abcGroupWritten || !bnplPrices?.nid) return;
+    if (!abcGroup || abcGroupWritten || !dealUuid) return;
     
     const writeGroup = async () => {
       try {
@@ -250,20 +250,20 @@ function HomeContent() {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            dealId: bnplPrices.nid,
+            deal_uuid: dealUuid,
             group: abcGroup,
           }),
         });
         if (res.ok) {
           setAbcGroupWritten(true);
-          console.log(`[ABC Test] Group ${abcGroup} written to HubSpot for deal ${bnplPrices.nid}`);
+          console.log(`[ABC Test] Group ${abcGroup} written to HubSpot`);
         }
       } catch (err) {
         console.error('[ABC Test] Failed to write group to HubSpot:', err);
       }
     };
     writeGroup();
-  }, [abcGroup, abcGroupWritten, bnplPrices?.nid]);
+  }, [abcGroup, abcGroupWritten, dealUuid]);
 
   // Ajustar formaPago a 'contado' si BNPL no está disponible
   useEffect(() => {
@@ -368,6 +368,12 @@ function HomeContent() {
         if (heshRes.ok) {
           const heshData = await heshRes.json();
           if (heshData.costBreakdown) {
+            // Sumar valor_reparaciones de HubSpot a remodelacion
+            const valorReparaciones = Number(bnplPrices?.valor_reparaciones || 0);
+            if (valorReparaciones > 0) {
+              heshData.costBreakdown.remodelacion.total += valorReparaciones;
+              heshData.costBreakdown.remodelacion.mejoras += valorReparaciones;
+            }
             setCostBreakdown(heshData.costBreakdown);
             analytics.dataLoaded('hesh', 'CO', nid);
           }
@@ -395,6 +401,12 @@ function HomeContent() {
           const heshData = await heshRes.json();
           console.log('[MX HESH] costBreakdown received:', heshData.costBreakdown ? 'yes' : 'no');
           if (heshData.costBreakdown) {
+            // Sumar valor_reparaciones de HubSpot a remodelacion
+            const valorReparaciones = Number(bnplPrices?.valor_reparaciones || 0);
+            if (valorReparaciones > 0) {
+              heshData.costBreakdown.remodelacion.total += valorReparaciones;
+              heshData.costBreakdown.remodelacion.mejoras += valorReparaciones;
+            }
             setCostBreakdown(heshData.costBreakdown);
             analytics.dataLoaded('hesh', 'MX', nid);
           }
