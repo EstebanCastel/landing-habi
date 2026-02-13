@@ -370,10 +370,13 @@ function HomeContent() {
           if (heshData.costBreakdown) {
             // Sumar valor_reparaciones de HubSpot a remodelacion
             const valorReparaciones = Number(bnplPrices?.valor_reparaciones || 0);
+            console.log('[HESH CO] valor_reparaciones from HubSpot:', bnplPrices?.valor_reparaciones, '-> parsed:', valorReparaciones);
+            console.log('[HESH CO] remodelacion.total BEFORE:', heshData.costBreakdown.remodelacion.total);
             if (valorReparaciones > 0) {
               heshData.costBreakdown.remodelacion.total += valorReparaciones;
               heshData.costBreakdown.remodelacion.mejoras += valorReparaciones;
             }
+            console.log('[HESH CO] remodelacion.total AFTER:', heshData.costBreakdown.remodelacion.total);
             setCostBreakdown(heshData.costBreakdown);
             analytics.dataLoaded('hesh', 'CO', nid);
           }
