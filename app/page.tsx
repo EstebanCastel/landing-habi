@@ -207,36 +207,47 @@ function HomeContent() {
       return;
     }
 
-    // Identify user with deal_uuid, then reload flags for the new distinct_id
+    // Identify user with deal_uuid
     posthog.identify(dealUuid);
-    posthog.reloadFeatureFlags();
 
-    // Wait for flags to be loaded with the correct distinct_id
-    const handler = () => {
-      const variant = posthog.getFeatureFlag('abc-test-landing-co');
-      console.log(`[ABC Test] PostHog flag raw value:`, variant, `(type: ${typeof variant})`);
-      if (typeof variant === 'string' && ['A', 'B', 'C'].includes(variant)) {
-        console.log(`[ABC Test] Deal ${dealUuid} assigned to group: ${variant}`);
-        setAbcGroup(variant);
+    // Use onFeatureFlags callback which receives loaded flags and variants
+    posthog.onFeatureFlags((flags: string[], variants: Record<string, string | boolean>) => {
+      console.log('[ABC Test] All loaded flags:', flags);
+      console.log('[ABC Test] All variants:', JSON.stringify(variants));
+      console.log('[ABC Test] distinct_id:', posthog.get_distinct_id());
+      
+      const variant = variants?.['abc-test-landing-co'];
+      console.log(`[ABC Test] Flag value from variants:`, variant, `(type: ${typeof variant})`);
+      
+      // Also try getFeatureFlag
+      const flagValue = posthog.getFeatureFlag('abc-test-landing-co');
+      console.log(`[ABC Test] getFeatureFlag value:`, flagValue);
+
+      const value = variant || flagValue;
+      
+      if (typeof value === 'string' && ['A', 'B', 'C'].includes(value)) {
+        console.log(`[ABC Test] Deal ${dealUuid} -> group: ${value}`);
+        setAbcGroup(value);
       } else {
-        // Flag not configured yet or returned false - retry once
-        console.warn(`[ABC Test] Flag returned unexpected value: ${variant}. Retrying...`);
+        console.warn(`[ABC Test] Flag not found in loaded flags. Available flags: ${flags.join(', ')}`);
+        console.warn(`[ABC Test] Reloading flags with distinct_id: ${dealUuid}...`);
+        // Force reload with the identified user
+        posthog.reloadFeatureFlags();
         setTimeout(() => {
-          posthog.reloadFeatureFlags();
-          // Second attempt after reload
-          const retry = posthog.getFeatureFlag('abc-test-landing-co');
-          console.log(`[ABC Test] Retry flag value:`, retry);
-          if (typeof retry === 'string' && ['A', 'B', 'C'].includes(retry)) {
-            setAbcGroup(retry);
+          const retryVariant = posthog.getFeatureFlag('abc-test-landing-co');
+          console.log(`[ABC Test] After reload - flag value:`, retryVariant);
+          if (typeof retryVariant === 'string' && ['A', 'B', 'C'].includes(retryVariant)) {
+            setAbcGroup(retryVariant);
           } else {
-            console.error(`[ABC Test] Flag still not available. Defaulting to C.`);
+            console.error(`[ABC Test] Flag unavailable after retry. Defaulting to C.`);
             setAbcGroup('C');
           }
-        }, 2000);
+        }, 3000);
       }
-    };
+    });
 
-    posthog.onFeatureFlags(handler);
+    // Also force a reload to ensure flags are fetched with the new distinct_id
+    posthog.reloadFeatureFlags();
   }, [dealUuid, bnplPrices]);
 
   // Write ABC group to HubSpot (once)
