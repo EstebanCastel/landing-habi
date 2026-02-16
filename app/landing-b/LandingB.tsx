@@ -4,6 +4,7 @@ import { Montserrat } from "next/font/google"
 import Image from "next/image"
 import { useState } from "react"
 import type { HubSpotProperties } from "../lib/hubspot"
+import OfferCountdown from "../habi/components/OfferCountdown"
 
 const montserrat = Montserrat({ subsets: ["latin"] })
 
@@ -76,6 +77,11 @@ export default function LandingB({ properties, dealUuid }: LandingBProps) {
 
   return (
     <div key={`${dealUuid}-${_forceUpdate}`} className="min-h-screen bg-gray-50">
+      {/* Countdown */}
+      <div className="sticky top-0 z-50">
+        <OfferCountdown dealUuid={dealUuid} />
+      </div>
+
       {/* Hero Section */}
       <div className="relative px-4 sm:px-6 print-hero-section">
         <div

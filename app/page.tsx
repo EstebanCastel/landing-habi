@@ -5,7 +5,7 @@ import dynamic from 'next/dynamic';
 import Image from 'next/image';
 import posthog from 'posthog-js';
 import { useSearchParams, usePathname } from 'next/navigation';
-import AnnouncementBar from './habi/components/AnnouncementBar';
+import OfferCountdown from './habi/components/OfferCountdown';
 import Navbar from './habi/components/Navbar';
 import SectionRenderer from './habi/components/SectionRenderer';
 import StickyPrice from './habi/components/StickyPrice';
@@ -221,16 +221,16 @@ function HomeContent() {
       return Math.abs(hash);
     };
 
-    const groups: ('A' | 'B' | 'C')[] = ['A', 'B', 'C'];
-    const group = groups[hashUuid(dealUuid) % 3];
+    const groups: ('A' | 'B')[] = ['A', 'B'];
+    const group = groups[hashUuid(dealUuid) % 2];
     
-    console.log(`[ABC Test] Deal ${dealUuid} -> hash ${hashUuid(dealUuid)} -> group: ${group}`);
+    console.log(`[AB Test] Deal ${dealUuid} -> hash ${hashUuid(dealUuid)} -> group: ${group}`);
     setAbcGroup(group);
 
     // Track assignment in PostHog for analytics
     try {
       posthog.identify(dealUuid);
-      posthog.capture('abc_test_assigned', {
+      posthog.capture('ab_test_assigned', {
         group,
         deal_uuid: dealUuid,
         country: 'CO',
@@ -295,8 +295,8 @@ function HomeContent() {
 
   // ─── Analytics: pageview, scroll depth, tiempo en página (ONLY for group C) ───
   useEffect(() => {
-    // Skip analytics for groups A and B
-    if (abcGroup === 'A' || abcGroup === 'B') return;
+    // Skip GA/Segment analytics for group A (landing basica)
+    if (abcGroup === 'A') return;
 
     const country = bnplPrices?.country ?? 'CO';
     analytics.pageView(dealUuid ? `offer_${dealUuid}` : 'home', { dealUuid: dealUuid || undefined, country });
@@ -304,8 +304,8 @@ function HomeContent() {
     const cleanupScroll = initScrollTracking(country);
     const cleanupPageTime = initPageTimeTracking(country);
 
-    // Enable PostHog session recording for group C
-    if (abcGroup === 'C') {
+    // Enable PostHog session recording for group B (modular landing)
+    if (abcGroup === 'B') {
       try { posthog.startSessionRecording(); } catch { /* ignore if not available */ }
     }
 
@@ -319,12 +319,8 @@ function HomeContent() {
   const [selectedDonation, setSelectedDonation] = useState('');
   const [donationAmount, setDonationAmount] = useState(0);
 
-  // Estado para carrusel de videos en móvil
-  const [currentVideoIndex, setCurrentVideoIndex] = useState(0);
-  
   // Cargar configuración de secciones
   const landingConfig = sectionsConfig as LandingConfig;
-  const DONATION_VIDEOS = landingConfig.donationVideos;
 
   // Ref para el panel derecho en desktop
   const rightColumnRef = useRef<HTMLDivElement | null>(null);
@@ -720,12 +716,12 @@ function HomeContent() {
     );
   }
 
-  // A/B/C Test: Render Landing B for groups A and B (Colombia only)
-  if (bnplPrices && (abcGroup === 'A' || abcGroup === 'B')) {
+  // A/B Test: A = landing basica, B = landing modular (Colombia only)
+  if (bnplPrices && abcGroup === 'A') {
     return <LandingB properties={bnplPrices} dealUuid={dealUuid} />;
   }
 
-  // Waiting for ABC group assignment (show loading briefly) - CO or undefined country
+  // Waiting for AB group assignment (show loading briefly) - CO or undefined country
   if (bnplPrices && !abcGroup && (bnplPrices.country === 'CO' || !bnplPrices.country)) {
     return (
       <div className="min-h-screen bg-white flex items-center justify-center">
@@ -736,7 +732,7 @@ function HomeContent() {
     );
   }
 
-  // Group C (or MX): Render the modular landing (current)
+  // Group B (or MX): Render the modular landing (current)
   return (
     <main className="min-h-screen bg-white flex flex-col">
       {/* Analytics only for Group C */}
@@ -745,9 +741,9 @@ function HomeContent() {
       <Suspense fallback={null}>
         <PageViewTracker />
       </Suspense>
-      {/* Header sticky - AnnouncementBar + Navbar */}
+      {/* Header sticky - Countdown + Navbar */}
       <div className="sticky top-0 z-50">
-        <AnnouncementBar fechaExpiracion={PROPERTY_DATA.fechaExpiracion} />
+        <OfferCountdown dealUuid={dealUuid} />
         <Navbar activeCountry={bnplPrices?.country ?? 'CO'} />
       </div>
 
@@ -758,81 +754,23 @@ function HomeContent() {
           className="sticky bg-white z-40 border-b border-gray-100"
           style={{ 
             top: `${mobileHeaderHeight}px`,
-            height: '200px'
+            height: '220px'
           }}
         >
-          {/* Fondo neutro por defecto */}
-          <div className="absolute inset-0 bg-gradient-to-br from-purple-50 to-white" />
-
-          {/* Imagen de modalidad seleccionada - sección 'other' (tabs de modalidad) */}
+          {/* Casa SVG - para todas las secciones excepto comparables */}
           <div 
-            className={`absolute inset-0 transition-opacity duration-500 ${activeSection === 'other' ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}
+            className={`absolute inset-0 transition-opacity duration-500 bg-white flex items-center justify-center ${activeSection !== 'comparables' ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}
           >
             <Image
-              src={
-                modalidadVenta === 'habi' 
-                  ? '/Ultrarealistic_lifestyle_editorial_202602021.jpeg'
-                  : modalidadVenta === 'inmobiliaria'
-                  ? '/Ultrarealistic_lifestyle_editorial_202602021 (7).jpeg'
-                  : '/Image_202602031441.jpeg'
-              }
-              alt={
-                modalidadVenta === 'habi' 
-                  ? 'Compra directa Habi'
-                  : modalidadVenta === 'inmobiliaria'
-                  ? 'Inmobiliaria'
-                  : 'Venta propia'
-              }
-              fill
-              className="object-cover"
-              style={{ objectPosition: 'center 30%' }}
-            />
-            <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent" />
-          </div>
-
-          {/* Imagen de configuración - sección 'configurator' */}
-          <div 
-            className={`absolute inset-0 transition-opacity duration-500 ${activeSection === 'configurator' ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}
-          >
-            <Image
-              src="/Image_202602031055.jpeg"
-              alt="Configuración de tu oferta"
-              fill
-              className="object-cover"
-              style={{ objectPosition: 'center 30%' }}
-            />
-            <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent" />
-          </div>
-
-          {/* Imagen de forma de pago - sección 'payment' */}
-          <div 
-            className={`absolute inset-0 transition-opacity duration-500 ${activeSection === 'payment' ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}
-          >
-            <Image
-              src="/Ultrarealistic_lifestyle_editorial_202602031 (3).jpeg"
-              alt="Forma de pago"
-              fill
-              className="object-cover"
-              style={{ objectPosition: 'center 40%' }}
-            />
-            <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent" />
-          </div>
-          
-          {/* Imagen del inmueble - sección 'property' */}
-          <div 
-            className={`absolute inset-0 transition-opacity duration-500 ${activeSection === 'property' ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}
-          >
-            <Image
-              src="/Ultrarealistic_lifestyle_editorial_202602021 (8).jpeg"
+              src="/casa.svg"
               alt="Tu inmueble"
-              fill
-              className="object-cover"
-              style={{ objectPosition: 'center 40%' }}
+              width={400}
+              height={400}
+              className="w-52 h-52 sm:w-60 sm:h-60 object-contain"
               priority
             />
-            <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent" />
           </div>
-          
+
           {/* Mapa - sección 'comparables' */}
           <div 
             className={`absolute inset-0 transition-opacity duration-500 ${activeSection === 'comparables' ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}
@@ -852,53 +790,7 @@ function HomeContent() {
             )}
           </div>
 
-          {/* Carrusel de videos - sección 'donation' (móvil) */}
-          <div 
-            className={`absolute inset-0 transition-opacity duration-500 ${activeSection === 'donation' ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}
-          >
-            <div className="relative h-full">
-              <video 
-                key={currentVideoIndex}
-                src={DONATION_VIDEOS[currentVideoIndex]}
-                autoPlay
-                loop
-                muted
-                playsInline
-                className="w-full h-full object-cover"
-              />
-              
-              {/* Flechas de navegación */}
-              <button 
-                onClick={() => setCurrentVideoIndex((prev) => (prev === 0 ? DONATION_VIDEOS.length - 1 : prev - 1))}
-                className="absolute left-2 top-1/2 -translate-y-1/2 w-8 h-8 bg-black/40 hover:bg-black/60 rounded-full flex items-center justify-center text-white transition-colors"
-              >
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-                </svg>
-              </button>
-              <button 
-                onClick={() => setCurrentVideoIndex((prev) => (prev === DONATION_VIDEOS.length - 1 ? 0 : prev + 1))}
-                className="absolute right-2 top-1/2 -translate-y-1/2 w-8 h-8 bg-black/40 hover:bg-black/60 rounded-full flex items-center justify-center text-white transition-colors"
-              >
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                </svg>
-              </button>
-
-              {/* Indicadores de posición */}
-              <div className="absolute bottom-2 left-1/2 -translate-x-1/2 flex gap-1.5">
-                {DONATION_VIDEOS.map((_, idx) => (
-                  <button
-                    key={idx}
-                    onClick={() => setCurrentVideoIndex(idx)}
-                    className={`w-2 h-2 rounded-full transition-colors ${
-                      idx === currentVideoIndex ? 'bg-white' : 'bg-white/40'
-                    }`}
-                  />
-                ))}
-              </div>
-            </div>
-          </div>
+          
         </div>
 
         {/* Configurador scrolleable en móvil */}
@@ -944,71 +836,24 @@ function HomeContent() {
       <div className="hidden md:flex flex-row flex-1">
         {/* Panel izquierdo - Imagen/Mapa fixed */}
         <div className="flex-1 relative">
-          {/* Imagen de modalidad seleccionada (para sección 'other' - tabs de modalidad) */}
+          {/* Casa SVG - para todas las secciones excepto comparables */}
           <div 
             className={`
               fixed left-0 top-[90px] bottom-0 right-[480px] z-10
               transition-opacity duration-500
-              ${activeSection === 'other' ? 'opacity-100' : 'opacity-0 pointer-events-none'}
+              ${activeSection !== 'comparables' ? 'opacity-100' : 'opacity-0 pointer-events-none'}
             `}
           >
-            <Image
-              src={
-                modalidadVenta === 'habi' 
-                  ? '/Ultrarealistic_lifestyle_editorial_202602021.jpeg'
-                  : modalidadVenta === 'inmobiliaria'
-                  ? '/Ultrarealistic_lifestyle_editorial_202602021 (7).jpeg'
-                  : '/Image_202602031441.jpeg'
-              }
-              alt={
-                modalidadVenta === 'habi' 
-                  ? 'Compra directa Habi'
-                  : modalidadVenta === 'inmobiliaria'
-                  ? 'Inmobiliaria'
-                  : 'Venta propia'
-              }
-              fill
-              className="object-cover"
-              style={{ objectPosition: 'center 30%' }}
-            />
-            <div className="absolute inset-0 bg-gradient-to-r from-black/20 to-transparent" />
-          </div>
-
-          {/* Imagen de configuración - sección 'configurator' */}
-          <div 
-            className={`
-              fixed left-0 top-[90px] bottom-0 right-[480px] z-10
-              transition-opacity duration-500
-              ${activeSection === 'configurator' ? 'opacity-100' : 'opacity-0 pointer-events-none'}
-            `}
-          >
-            <Image
-              src="/Image_202602031055.jpeg"
-              alt="Configuración de tu oferta"
-              fill
-              className="object-cover"
-              style={{ objectPosition: 'center 30%' }}
-            />
-            <div className="absolute inset-0 bg-gradient-to-r from-black/20 to-transparent" />
-          </div>
-          
-          {/* Imagen del inmueble - sección 'property' */}
-          <div 
-            className={`
-              fixed left-0 top-[90px] bottom-0 right-[480px] z-10
-              transition-opacity duration-500
-              ${activeSection === 'property' ? 'opacity-100' : 'opacity-0 pointer-events-none'}
-            `}
-          >
-            <Image
-              src="/Ultrarealistic_lifestyle_editorial_202602021 (8).jpeg"
-              alt="Tu inmueble"
-              fill
-              className="object-cover"
-              style={{ objectPosition: 'center 40%' }}
-              priority
-            />
-            <div className="absolute inset-0 bg-gradient-to-r from-black/20 to-transparent" />
+            <div className="w-full h-full bg-white flex items-center justify-center">
+              <Image
+                src="/casa.svg"
+                alt="Tu inmueble"
+                width={600}
+                height={600}
+                className="w-[28rem] h-[28rem] lg:w-[34rem] lg:h-[34rem] xl:w-[40rem] xl:h-[40rem] object-contain"
+                priority
+              />
+            </div>
           </div>
           
           {/* Mapa - sección 'comparables' */}
@@ -1032,47 +877,6 @@ function HomeContent() {
                 onSelectComparable={setSelectedComparable}
               />
             )}
-          </div>
-
-          {/* Imagen forma de pago - sección 'payment' */}
-          <div 
-            className={`
-              fixed left-0 top-[90px] bottom-0 right-[480px] z-10
-              transition-opacity duration-500
-              ${activeSection === 'payment' ? 'opacity-100' : 'opacity-0 pointer-events-none'}
-            `}
-          >
-            <Image
-              src="/Ultrarealistic_lifestyle_editorial_202602031 (3).jpeg"
-              alt="Forma de pago"
-              fill
-              className="object-cover"
-              style={{ objectPosition: 'center 40%' }}
-            />
-            <div className="absolute inset-0 bg-gradient-to-r from-black/20 to-transparent" />
-          </div>
-
-          {/* Grid de videos - sección 'donation' (desktop) */}
-          <div 
-            className={`
-              fixed left-0 top-[90px] bottom-0 right-[480px] z-10
-              transition-opacity duration-500
-              ${activeSection === 'donation' ? 'opacity-100' : 'opacity-0 pointer-events-none'}
-            `}
-          >
-            <div className="grid grid-cols-2 gap-1 h-full p-1">
-              {DONATION_VIDEOS.map((videoSrc, idx) => (
-                <video 
-                  key={idx}
-                  src={videoSrc}
-                  autoPlay
-                  loop
-                  muted
-                  playsInline
-                  className="w-full h-full object-cover rounded-lg"
-                />
-              ))}
-            </div>
           </div>
         </div>
         

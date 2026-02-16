@@ -102,17 +102,23 @@ const getComponentProps = (
       };
       
     case 'ComparablesSection': {
-      // Evaluación = precio_comite_ORIGINAL (HubSpot) + todos los costos del desglose HESH
+      // Evaluación = (base_sin_comisionHabi) / (1 - utilidadPct)
+      // base = precioComiteOrig + costos operativos + financiacion
+      // comisionHabi = evaluacion * utilidadPct (se calcula sobre la evaluacion total)
       let evaluacion = props.currentPrice;
       if (props.bnplPrices && props.costBreakdown) {
         const precioComiteOrig = Number(props.bnplPrices.precio_comite_original || props.bnplPrices.precio_comite || 0);
-        const totalCostos =
+        const costosSinUtilidad =
           props.costBreakdown.comision.total +
           props.costBreakdown.gastosMensuales.total +
-          props.costBreakdown.tarifaServicio.total +
+          props.costBreakdown.tarifaServicio.costoFinanciacion +
           props.costBreakdown.tramites.total +
           props.costBreakdown.remodelacion.total;
-        evaluacion = Math.round(precioComiteOrig + totalCostos);
+        const baseSinComisionHabi = precioComiteOrig + costosSinUtilidad;
+        const utilidadPct = props.costBreakdown.tarifaServicio.utilidadEsperada;
+        evaluacion = utilidadPct < 1
+          ? Math.round(baseSinComisionHabi / (1 - utilidadPct))
+          : Math.round(baseSinComisionHabi);
       }
       return {
         onSectionRef: refCallback,

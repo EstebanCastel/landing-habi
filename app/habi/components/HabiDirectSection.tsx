@@ -129,9 +129,34 @@ function PricingSummary({
   const comisionPctSummary = evaluacionInmueble > 0
     ? ((comisionTotal / evaluacionInmueble) * 100).toFixed(1)
     : COSTOS_PERCENTAGES.comisionTotal.toString();
-  const utilidadPctSummary = evaluacionInmueble > 0 && hayComercial && costBreakdown
-    ? ((gananciaHabi / evaluacionInmueble) * 100).toFixed(1)
-    : (costBreakdown ? (costBreakdown.tarifaServicio.utilidadEsperada * 100).toFixed(1) : '5');
+  
+  // Costo de financiacion en PricingSummary (tambien dinamico)
+  const costoFinanciacionSummaryHesh = costBreakdown
+    ? costBreakdown.tarifaServicio.costoFinanciacion
+    : valorMercado * 0.03;
+  const utilidadEsperadaSummaryPct = costBreakdown
+    ? costBreakdown.tarifaServicio.utilidadEsperada
+    : 0.032;
+  const bnplPercentageSummary = (() => {
+    if (!bnplPrices || configuration.formaPago === 'contado') return 0;
+    const precioBase = Number(bnplPrices.precio_comite || 0);
+    if (precioBase === 0) return 0;
+    const bnplMap: Record<string, string | undefined> = {
+      '3cuotas': bnplPrices.bnpl3,
+      '6cuotas': bnplPrices.bnpl6,
+      '9cuotas': bnplPrices.bnpl9,
+    };
+    const precioCuota = Number(bnplMap[configuration.formaPago] || 0);
+    return precioCuota > precioBase ? (precioCuota - precioBase) / precioBase : 0;
+  })();
+  const costoFinanciacionSummary = costoFinanciacionSummaryHesh * (1 - bnplPercentageSummary);
+  const financiacionPctSummary = evaluacionInmueble > 0
+    ? ((costoFinanciacionSummary / evaluacionInmueble) * 100).toFixed(1)
+    : '3.0';
+  const comisionHabiSummary = precioComiteOriginal > 0
+    ? precioComiteOriginal * utilidadEsperadaSummaryPct
+    : valorMercado * utilidadEsperadaSummaryPct;
+  const comisionHabiPctSummary = (utilidadEsperadaSummaryPct * 100).toFixed(1);
 
   return (
     <div id="cta-final-section" className="px-6 py-6 bg-white border-t border-gray-200">
@@ -162,7 +187,7 @@ function PricingSummary({
             <span className="text-gray-900">{formatPrice(evaluacionInmueble)}</span>
           </div>
           <div className="flex justify-between text-sm">
-            <span className="text-gray-600">Comisión {isMx ? 'TuHabi' : 'Habi'} ({comisionPctSummary}%)</span>
+            <span className="text-gray-600">Comisiones de venta ({comisionPctSummary}%)</span>
             <span className="text-gray-600">- {formatPrice(comisionTotal)}</span>
           </div>
           <div className="flex justify-between text-sm">
@@ -170,8 +195,12 @@ function PricingSummary({
             <span className="text-gray-600">- {formatPrice(propertyMensual)}</span>
           </div>
           <div className="flex justify-between text-sm">
-            <span className="text-gray-600">Tarifa de servicio ({utilidadPctSummary}%)</span>
-            <span className="text-gray-600">- {formatPrice(gananciaHabi)}</span>
+            <span className="text-gray-600">Tarifa de servicio ({financiacionPctSummary}%)</span>
+            <span className="text-gray-600">- {formatPrice(costoFinanciacionSummary)}</span>
+          </div>
+          <div className="flex justify-between text-sm">
+            <span className="text-gray-600">Comisión {isMx ? 'TuHabi' : 'Habi'} ({comisionHabiPctSummary}%)</span>
+            <span className="text-gray-600">- {formatPrice(comisionHabiSummary)}</span>
           </div>
           {costosTramites > 0 && (
             <div className="flex justify-between text-sm">
@@ -324,27 +353,62 @@ export default function HabiDirectSection({
     ? costBreakdown.tramites.total
     : (valorMercado * COSTOS_PERCENTAGES.tramites) / 100;
   
+  const costoFinanciacionHesh = costBreakdown
+    ? costBreakdown.tarifaServicio.costoFinanciacion
+    : valorMercado * 0.03;
+  
+  const utilidadEsperadaPct = costBreakdown
+    ? costBreakdown.tarifaServicio.utilidadEsperada
+    : 0.032;
+
   const gananciaHabiHesh = costBreakdown
     ? costBreakdown.tarifaServicio.total
     : valorMercado * 0.05;
 
-  // Periodo estimado de venta en meses (para MX, basado en AMS del HESH)
-  const periodoMeses = Math.ceil((costBreakdown?.tarifaServicio.ams || 90) / 30);
-
-  // Evaluación del inmueble (constante) = precio_comite_ORIGINAL + todos los costos HESH
+  // precio_comite_original (se usa para comision Habi y evaluacion)
   const precioComiteOriginalMain = bnplPrices
     ? Number(bnplPrices.precio_comite_original || bnplPrices.precio_comite || 0)
     : 0;
-  const evaluacionMain = costBreakdown && precioComiteOriginalMain > 0
-    ? precioComiteOriginalMain + comisionTotal + propertyMensual + gananciaHabiHesh + costosTramites + costosRemodelacion
-    : valorMercado;
 
-  // Tarifa de servicio: residual si el comercial negoció, fija si no
+  // Comision Habi (utilidad) se calcula sobre la evaluacion total
+  // evaluacion = (base_sin_comisionHabi) / (1 - utilidadPct)
+  // comisionHabi = evaluacion * utilidadPct
+
+  // Costo financiacion dinamico: disminuye cuando hay cuotas (el extra % se resta)
+  const bnplPercentage = (() => {
+    if (!bnplPrices || configuration.formaPago === 'contado') return 0;
+    const precioBase = Number(bnplPrices.precio_comite || 0);
+    if (precioBase === 0) return 0;
+    const bnplMap: Record<string, string | undefined> = {
+      '3cuotas': bnplPrices.bnpl3,
+      '6cuotas': bnplPrices.bnpl6,
+      '9cuotas': bnplPrices.bnpl9,
+    };
+    const precioCuota = Number(bnplMap[configuration.formaPago] || 0);
+    return precioCuota > precioBase ? (precioCuota - precioBase) / precioBase : 0;
+  })();
+  const costoFinanciacionDinamico = costoFinanciacionHesh * (1 - bnplPercentage);
+
+  // Periodo estimado de venta en meses (para MX, basado en AMS del HESH)
+  const periodoMeses = Math.ceil((costBreakdown?.tarifaServicio.ams || 90) / 30);
+
+  // Base sin comision Habi = precioComiteOriginal + costos operativos + financiacion
+  const baseSinComisionHabi = costBreakdown && precioComiteOriginalMain > 0
+    ? precioComiteOriginalMain + comisionTotal + propertyMensual + costoFinanciacionHesh + costosTramites + costosRemodelacion
+    : valorMercado;
+  
+  // Evaluacion = base / (1 - utilidadPct), comisionHabi = evaluacion * utilidadPct
+  const evaluacionMain = utilidadEsperadaPct < 1
+    ? Math.round(baseSinComisionHabi / (1 - utilidadEsperadaPct))
+    : baseSinComisionHabi;
+  const comisionHabiUtilidad = evaluacionMain - baseSinComisionHabi;
+
+  // Costos fijos (sin comision Habi ni financiacion)
   const hayComercialMain = bnplPrices?.bnpl_1_comercial_raw != null;
   const costosFijosMain = comisionTotal + propertyMensual + costosTramites + costosRemodelacion;
   const gananciaHabi = hayComercialMain && costBreakdown
-    ? Math.max(0, evaluacionMain - currentPrice - costosFijosMain)
-    : gananciaHabiHesh;
+    ? Math.max(0, evaluacionMain - currentPrice - costosFijosMain - comisionHabiUtilidad)
+    : costoFinanciacionHesh;
 
   // Calcular porcentajes reales
   const askPrice = costBreakdown?.askPrice || valorMercado;
@@ -360,9 +424,12 @@ export default function HabiDirectSection({
   const tramitesPct = costBreakdown
     ? ((costBreakdown.tramites.total / askPrice) * 100).toFixed(1)
     : COSTOS_PERCENTAGES.tramites.toString();
-  const utilidadPct = evaluacionMain > 0 && hayComercialMain && costBreakdown
-    ? ((gananciaHabi / evaluacionMain) * 100).toFixed(1)
-    : (costBreakdown ? (costBreakdown.tarifaServicio.utilidadEsperada * 100).toFixed(1) : '5');
+  const financiacionPct = evaluacionMain > 0
+    ? ((costoFinanciacionDinamico / evaluacionMain) * 100).toFixed(1)
+    : '3.0';
+  const comisionHabiPct = evaluacionMain > 0
+    ? ((comisionHabiUtilidad / evaluacionMain) * 100).toFixed(1)
+    : (utilidadEsperadaPct * 100).toFixed(1);
 
   return (
     <>
@@ -374,15 +441,15 @@ export default function HabiDirectSection({
         </p>
 
         <div className="space-y-4">
-          {/* Comisión */}
+          {/* Comisiones de venta (Brokers) */}
           <div className="flex justify-between items-start pb-3 border-b border-gray-100">
             <div className="flex-1">
-              <p className="font-medium text-sm mb-2">Comisión {isMx ? 'TuHabi' : 'Habi'}</p>
+              <p className="font-medium text-sm mb-2">Comisiones de venta</p>
               <p className="text-xs text-gray-600 mb-1">
-                Comisión total del <strong>{comisionPct}%</strong>.
+                Comisiones de intermediación para vender tu inmueble ({comisionPct}%).
               </p>
               <p className="text-xs text-gray-500">
-                En una venta tradicional pagarías entre 5% y 7%.
+                En una venta tradicional pagarías entre 3% y 5%.
               </p>
             </div>
             <div className="text-right ml-4">
@@ -428,17 +495,31 @@ export default function HabiDirectSection({
             </div>
           </div>
 
-          {/* Tarifa de servicio Habi */}
+          {/* Tarifa de servicio (costos operativos) */}
           <div className="flex justify-between items-start pb-3 border-b border-gray-100">
             <div className="flex-1">
-              <p className="font-medium text-sm mb-2">Tarifa de servicio {isMx ? 'TuHabi' : 'Habi'}</p>
+              <p className="font-medium text-sm mb-2">Tarifa de servicio</p>
               <p className="text-xs text-gray-600 mb-1">
-                {isMx ? 'TuHabi' : 'Habi'} obtiene una ganancia del <strong>{utilidadPct}%</strong> sobre el valor de venta del inmueble.
+                Costos operativos asociados al proceso de compra y venta del inmueble.
               </p>
             </div>
             <div className="text-right ml-4">
-              <p className="font-semibold">{formatPrice(gananciaHabi)}</p>
-              <p className="text-xs text-gray-500">{utilidadPct}%</p>
+              <p className="font-semibold">{formatPrice(costoFinanciacionDinamico)}</p>
+              <p className="text-xs text-gray-500">{financiacionPct}%</p>
+            </div>
+          </div>
+
+          {/* Comisión Habi (utilidad) */}
+          <div className="flex justify-between items-start pb-3 border-b border-gray-100">
+            <div className="flex-1">
+              <p className="font-medium text-sm mb-2">Comisión {isMx ? 'TuHabi' : 'Habi'}</p>
+              <p className="text-xs text-gray-600 mb-1">
+                Ganancia de {isMx ? 'TuHabi' : 'Habi'} del <strong>{comisionHabiPct}%</strong> por la compra de tu inmueble.
+              </p>
+            </div>
+            <div className="text-right ml-4">
+              <p className="font-semibold">{formatPrice(comisionHabiUtilidad)}</p>
+              <p className="text-xs text-gray-500">{comisionHabiPct}%</p>
             </div>
           </div>
 
