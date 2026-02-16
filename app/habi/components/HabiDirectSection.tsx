@@ -305,7 +305,7 @@ function PricingSummary({
       </button>
 
       <p className="text-xs text-gray-500 text-center mt-6">
-        Oferta válida por 3 días calendario.<br />
+        Oferta válida por 2 días calendario.<br />
         Sujeta a verificación técnica y documental del inmueble.
       </p>
     </div>
