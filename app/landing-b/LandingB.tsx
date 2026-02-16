@@ -29,12 +29,16 @@ export default function LandingB({ properties, dealUuid }: LandingBProps) {
   const [_forceUpdate] = useState(0)
 
   // Analytics tracking for landing A
+  // Delay to allow GA/Segment scripts to load (they use strategy="afterInteractive")
   useEffect(() => {
     const country = properties.country || 'CO';
-    analytics.pageView(`offer_landing_a_${dealUuid}`, { dealUuid, country });
+    const timer = setTimeout(() => {
+      analytics.pageView(`offer_landing_a_${dealUuid}`, { dealUuid, country });
+    }, 2000);
     const cleanupScroll = initScrollTracking(country);
     const cleanupTime = initPageTimeTracking(country);
     return () => {
+      clearTimeout(timer);
       if (cleanupScroll) cleanupScroll();
       if (cleanupTime) cleanupTime();
     };
