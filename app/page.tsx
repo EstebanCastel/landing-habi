@@ -284,7 +284,7 @@ function HomeContent() {
     // Actualizar favicon
     const link = document.querySelector("link[rel~='icon']") as HTMLLinkElement | null;
     if (link) {
-      link.href = isMx ? '/tuhabi.svg' : '/habilogo.jpg';
+      link.href = isMx ? '/tuhabi.svg' : '/Logo-1200x1200.png';
     }
   }, [bnplPrices?.country]);
 

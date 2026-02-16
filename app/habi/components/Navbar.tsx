@@ -23,7 +23,7 @@ export default function Navbar({ activeCountry = 'CO' }: NavbarProps) {
           />
         ) : (
           <Image
-            src="/habilogo.jpg"
+            src="/Logo-1200x1200.png"
             alt="Habi"
             width={80}
             height={32}

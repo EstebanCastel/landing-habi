@@ -168,7 +168,7 @@ export default function AIAssistant() {
                     <div className="flex items-start gap-2">
                       <div className="w-8 h-8 rounded-full overflow-hidden flex-shrink-0 relative bg-white border border-gray-200">
                         <Image
-                          src="/habilogo.jpg"
+                          src="/Logo-1200x1200.png"
                           alt="Habi"
                           fill
                           className="object-contain p-0.5"
@@ -191,7 +191,7 @@ export default function AIAssistant() {
                 <div className="flex items-start gap-2">
                   <div className="w-8 h-8 rounded-full overflow-hidden flex-shrink-0 relative bg-white border border-gray-200">
                     <Image
-                      src="/habilogo.jpg"
+                      src="/Logo-1200x1200.png"
                       alt="Habi"
                       fill
                       className="object-contain p-0.5"

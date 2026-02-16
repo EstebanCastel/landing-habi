@@ -104,7 +104,7 @@ function HabiVsMarketComparison({ totalExpenses, netAmount, habiOffer, country }
               <div className="text-center space-y-2">
                 <p className="text-xs uppercase tracking-widest font-bold text-purple-700">{brandName}</p>
                 <div className="py-2">
-                  <img src={country === 'MX' ? '/tuhabi.svg' : '/habilogo.jpg'} alt={brandName} className="w-12 h-12 mx-auto rounded-lg object-contain" />
+                  <img src={country === 'MX' ? '/tuhabi.svg' : '/Logo-1200x1200.png'} alt={brandName} className="w-12 h-12 mx-auto rounded-lg object-contain" />
                 </div>
                 <p className="text-2xl md:text-4xl font-black text-purple-700">
                   ${habiTotal.toFixed(1)}M
@@ -453,7 +453,7 @@ export default function ExpenseCalculator({
           {/* Header */}
           <header className="calculator-header">
             <div className="logo-container">
-              <img src={country === 'MX' ? '/tuhabi.svg' : '/habilogo.jpg'} alt={`${country === 'MX' ? 'TuHabi' : 'Habi'} Logo`} style={{ width: '36px', height: '36px', borderRadius: '8px', objectFit: 'contain' }} />
+              <img src={country === 'MX' ? '/tuhabi.svg' : '/Logo-1200x1200.png'} alt={`${country === 'MX' ? 'TuHabi' : 'Habi'} Logo`} style={{ width: '36px', height: '36px', borderRadius: '8px', objectFit: 'contain' }} />
               <span className="app-title">CALCULADORA DE GASTOS</span>
             </div>
             <span className="calculate-link">
@@ -647,7 +647,7 @@ export default function ExpenseCalculator({
             {/* Header */}
             <header className="calculator-header">
               <div className="logo-container">
-                <img src={country === 'MX' ? '/tuhabi.svg' : '/habilogo.jpg'} alt={`${country === 'MX' ? 'TuHabi' : 'Habi'} Logo`} style={{ width: '36px', height: '36px', borderRadius: '8px', objectFit: 'contain' }} />
+                <img src={country === 'MX' ? '/tuhabi.svg' : '/Logo-1200x1200.png'} alt={`${country === 'MX' ? 'TuHabi' : 'Habi'} Logo`} style={{ width: '36px', height: '36px', borderRadius: '8px', objectFit: 'contain' }} />
                 <span className="app-title">CALCULADORA DE GASTOS</span>
               </div>
               <div className="status-badge">RESULTADO</div>
