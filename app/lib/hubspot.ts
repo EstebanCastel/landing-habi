@@ -26,6 +26,7 @@ export interface HubSpotProperties {
   subsidio_aprobado_lider?: string | null
   subsidio_aprobado_director?: string | null
   valor_reparaciones?: string | null
+  quiere_ofertar_alianza?: string | null
   error?: boolean
   message?: string
 }

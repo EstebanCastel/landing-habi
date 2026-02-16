@@ -329,6 +329,7 @@ export default function HabiDirectSection({
 }: HabiDirectSectionProps) {
   const [showExpenseCalculator, setShowExpenseCalculator] = useState(false);
   const isMx = bnplPrices?.country === 'MX';
+  const isAlianza = !isMx && bnplPrices?.quiere_ofertar_alianza?.toLowerCase().trim() === 'si';
   
   // Precio final con donación descontada
   const finalPrice = currentPrice - donationAmount;
@@ -501,13 +502,21 @@ export default function HabiDirectSection({
           <div className="flex justify-between items-start pb-3 border-b border-gray-100">
             <div className="flex-1">
               <p className="font-medium text-sm mb-2">Tarifa de servicio</p>
-              <p className="text-xs text-gray-600 mb-1">
-                Costos operativos asociados al proceso de compra y venta del inmueble.
-              </p>
+              {isAlianza ? (
+                <p className="text-xs text-gray-600 mb-1">
+                  Incluye trámites bancarios, levantamiento de gravámenes y todos los costos operativos asociados al proceso de compra y venta.
+                </p>
+              ) : (
+                <p className="text-xs text-gray-600 mb-1">
+                  Costos operativos asociados al proceso de compra y venta del inmueble.
+                </p>
+              )}
             </div>
             <div className="text-right ml-4">
-              <p className="font-semibold">{formatPrice(costoFinanciacionDinamico)}</p>
-              <p className="text-xs text-gray-500">{financiacionPct}%</p>
+              <p className="font-semibold">{formatPrice(isAlianza ? costoFinanciacionDinamico + costosTramites : costoFinanciacionDinamico)}</p>
+              <p className="text-xs text-gray-500">{isAlianza
+                ? (evaluacionMain > 0 ? (((costoFinanciacionDinamico + costosTramites) / evaluacionMain) * 100).toFixed(1) : financiacionPct)
+                : financiacionPct}%</p>
             </div>
           </div>
 
@@ -531,15 +540,35 @@ export default function HabiDirectSection({
               <p className="font-medium text-sm mb-2">
                 {isMx ? 'Costos operativos' : 'Trámites y notarías'}
               </p>
-              <p className="text-xs text-gray-600 mb-1">
-                {isMx
-                  ? 'Gastos operativos asociados al proceso de compra del inmueble.'
-                  : 'Gastos legales y notariales asociados a la compraventa del inmueble.'}
-              </p>
+              {isAlianza ? (
+                <>
+                  <p className="text-xs text-green-600 font-medium mb-1">
+                    Te estás ahorrando {formatPrice(costosTramites)} en costos de trámites y notarías.
+                  </p>
+                  <p className="text-xs text-gray-500">
+                    Gastos legales y notariales que Habi asume por ti gracias a nuestras alianzas bancarias.
+                  </p>
+                </>
+              ) : (
+                <p className="text-xs text-gray-600 mb-1">
+                  {isMx
+                    ? 'Gastos operativos asociados al proceso de compra del inmueble.'
+                    : 'Gastos legales y notariales asociados a la compraventa del inmueble.'}
+                </p>
+              )}
             </div>
             <div className="text-right ml-4">
-              <p className="font-semibold">{formatPrice(costosTramites)}</p>
-              <p className="text-xs text-gray-500">{tramitesPct}%</p>
+              {isAlianza ? (
+                <>
+                  <p className="font-semibold text-green-600">$0</p>
+                  <p className="text-xs text-green-500 line-through">{formatPrice(costosTramites)}</p>
+                </>
+              ) : (
+                <>
+                  <p className="font-semibold">{formatPrice(costosTramites)}</p>
+                  <p className="text-xs text-gray-500">{tramitesPct}%</p>
+                </>
+              )}
             </div>
           </div>
 

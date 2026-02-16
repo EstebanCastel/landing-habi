@@ -13,7 +13,8 @@ interface SaleModalityProps {
   onSectionRef?: (ref: HTMLDivElement | null) => void;
   availableModalities?: Modalidad[]; // Permite configurar cuáles modalidades mostrar
   country?: string;
-  tarifaServicioPct?: string; // Porcentaje real de tarifa de servicio (comisión total)
+  tarifaServicioPct?: string;
+  isAlianza?: boolean; // CO alianza bancaria
 }
 
 const TABS = [
@@ -339,7 +340,7 @@ function GalleryDual({ images }: { images: string[] }) {
   );
 }
 
-export default function SaleModality({ modalidadVenta, setModalidadVenta, onSectionRef, availableModalities, country, tarifaServicioPct }: SaleModalityProps) {
+export default function SaleModality({ modalidadVenta, setModalidadVenta, onSectionRef, availableModalities, country, tarifaServicioPct, isAlianza }: SaleModalityProps) {
   const [showModal, setShowModal] = useState(false);
   const [modalView, setModalView] = useState<ModalView>('features');
   const [modalTab, setModalTab] = useState<Modalidad>(modalidadVenta);
@@ -356,7 +357,9 @@ export default function SaleModality({ modalidadVenta, setModalidadVenta, onSect
         ...tab,
         label: isMx ? 'TuHabi te compra' : 'Habi te compra',
         title: `Venta directa a ${brandName}`,
-        description: 'Recibe una oferta por tu inmueble. Sin publicar, sin visitas de extraños, sin negociaciones eternas.',
+        description: isAlianza
+          ? 'Compramos tu inmueble directamente. Saldamos tu hipoteca, levantamos los gravámenes y nos encargamos de todo el proceso.'
+          : 'Recibe una oferta por tu inmueble. Sin publicar, sin visitas de extraños, sin negociaciones eternas.',
       };
     }
     return tab;
@@ -396,7 +399,26 @@ export default function SaleModality({ modalidadVenta, setModalidadVenta, onSect
   const availableModalitiesForModal = availableModalities || (['habi', 'inmobiliaria', 'cuenta_propia'] as Modalidad[]);
   
   const selectedTab = filteredTabs.find(tab => tab.id === modalidadVenta);
-  const modalContent = MODAL_CONTENT[modalTab];
+  
+  // Contenido modal dinamico: adaptar textos cuando es alianza CO
+  const baseModalContent = MODAL_CONTENT[modalTab];
+  const modalContent = (!isAlianza || modalTab !== 'habi') ? baseModalContent : {
+    ...baseModalContent,
+    subtitle: 'Con nuestras alianzas bancarias, te damos más beneficios.',
+    sections: baseModalContent.sections.map((s) => {
+      if (s.type === 'hero') return s;
+      if (s.title === 'Nos encargamos de todo') {
+        return { ...s, title: 'Saldamos tu hipoteca', description: 'Nos encargamos del pago de la hipoteca y el levantamiento de gravámenes. Tú no tienes que hacer ningún trámite bancario.' };
+      }
+      if (s.title.includes('Recibe tu dinero')) {
+        return { ...s, title: 'No escrituramos a nuestro nombre', description: 'Tu inmueble se transfiere directamente al nuevo comprador, lo que te da mayor garantía y te ahorra costos de retefuente, notaría y registro.' };
+      }
+      if (s.title === 'Remodelaciones incluidas') {
+        return { ...s, title: 'Ahorro en trámites y notarías', description: 'Gracias a nuestras alianzas, asumimos los gastos legales y notariales. Te ahorras estos costos que normalmente corren por tu cuenta.' };
+      }
+      return s;
+    }),
+  };
 
   // Reportar la ref al padre
   useEffect(() => {

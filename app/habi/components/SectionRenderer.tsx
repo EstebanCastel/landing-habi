@@ -150,6 +150,7 @@ const getComponentProps = (
           tarifaServicioPct = (cb.tarifaServicio.utilidadEsperada * 100).toFixed(1);
         }
       }
+      const isAlianzaCO = props.bnplPrices?.country !== 'MX' && props.bnplPrices?.quiere_ofertar_alianza?.toLowerCase().trim() === 'si';
       return {
         modalidadVenta: props.modalidadVenta,
         setModalidadVenta: props.setModalidadVenta,
@@ -157,6 +158,7 @@ const getComponentProps = (
         availableModalities: section.availableModalities,
         country: props.bnplPrices?.country,
         tarifaServicioPct,
+        isAlianza: isAlianzaCO,
       };
     }
       
