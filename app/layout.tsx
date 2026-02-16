@@ -6,10 +6,7 @@ export const metadata: Metadata = {
   title: "Habi | Vende tu inmueble",
   description: "Vende tu inmueble de forma rápida y segura con Habi. Te compramos directamente o te ayudamos a vender.",
   icons: {
-    icon: [
-      { url: '/Logo-1200x1200.png', sizes: '192x192', type: 'image/png' },
-      { url: '/Logo-1200x1200.png', sizes: '32x32', type: 'image/png' },
-    ],
+    icon: '/favicon-32.png',
     apple: '/Logo-1200x1200.png',
   },
 };
