@@ -27,7 +27,7 @@
       },
       "panelImagePosition": "center 30%",
       "refName": "saleModality",
-      "availableModalities": ["habi", "inmobiliaria", "cuenta_propia"],
+      "availableModalities": ["habi"],
       "enabled": true
     },
     {
