@@ -206,7 +206,11 @@ function PricingSummary({
           {costosTramites > 0 && (
             <div className="flex justify-between text-sm">
               <span className="text-gray-600">{isMx ? 'Costos operativos' : 'Trámites y notarías'}</span>
-              <span className="text-gray-600">- {formatPrice(costosTramites)}</span>
+              {isAlianza ? (
+                <span className="text-green-600">$0 (incluido)</span>
+              ) : (
+                <span className="text-gray-600">- {formatPrice(costosTramites)}</span>
+              )}
             </div>
           )}
           {costosRemodelacion > 0 && (
