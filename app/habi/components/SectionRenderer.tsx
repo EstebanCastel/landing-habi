@@ -236,15 +236,16 @@ export default function SectionRenderer(props: SectionRendererProps) {
   
   // Determinar si BNPL está habilitado
   // México no tiene pago a cuotas → nunca mostrar sección de cuotas
+  // Colombia alianza → no mostrar cuotas (alianza no tiene BNPL)
   // Colombia: según negocio_aplica_para_bnpl (Si/No, true/false)
-  // Si negocio_aplica_para_bnpl es null/undefined → no mostrar cuotas
   const isMx = bnplPrices?.country === 'MX';
+  const isAlianzaCO = !isMx && bnplPrices?.quiere_ofertar_alianza?.toLowerCase().trim() === 'si';
   const negocioAplicaBnpl = bnplPrices?.negocio_aplica_para_bnpl?.toLowerCase().trim();
-  const bnplEnabled = isMx
+  const bnplEnabled = (isMx || isAlianzaCO)
     ? 'false'
     : negocioAplicaBnpl && !['no', 'false', 'null'].includes(negocioAplicaBnpl)
       ? 'true'
-      : 'false'; // null o "no"/"false" → no mostrar cuotas
+      : 'false';
   
   // Determinar si razón de venta es "Liquidez" (nombre interno "2")
   // Si es "2" o "Liquidez" → mostrar sección de liquidez
