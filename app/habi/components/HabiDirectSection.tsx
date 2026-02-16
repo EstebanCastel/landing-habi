@@ -548,7 +548,7 @@ export default function HabiDirectSection({
                     Te estás ahorrando {formatPrice(costosTramites)} en costos de trámites y notarías.
                   </p>
                   <p className="text-xs text-gray-500">
-                    Gastos legales y notariales que Habi asume por ti gracias a nuestras alianzas bancarias.
+                    Gastos legales y notariales que Habi asume por ti gracias a nuestras alianzas.
                   </p>
                 </>
               ) : (
