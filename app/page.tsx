@@ -107,12 +107,7 @@ function HomeContent() {
   // Datos de costos HESH (desglose real)
   const [costBreakdown, setCostBreakdown] = useState<HeshCostBreakdown | null>(null);
 
-  // MX: solo mostrar percentil 50 inferior en el mapa
   const mapComparables = useMemo(() => {
-    if (bnplPrices?.country === 'MX' && comparables.length > 0) {
-      const sorted = [...comparables].sort((a, b) => a.lastAskPrice - b.lastAskPrice);
-      return sorted.slice(0, Math.ceil(sorted.length / 2));
-    }
     return comparables;
   }, [comparables, bnplPrices?.country]);
   

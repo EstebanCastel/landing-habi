@@ -48,10 +48,7 @@ export default function ComparablesSection({
   // Ordenar comparables de menor a mayor precio
   const sortedComparables = [...comparables].sort((a, b) => a.lastAskPrice - b.lastAskPrice);
 
-  // MX: solo mostrar percentil 50 inferior (la mitad más barata)
-  const displayComparables = isMx
-    ? sortedComparables.slice(0, Math.ceil(sortedComparables.length / 2))
-    : sortedComparables;
+  const displayComparables = sortedComparables;
   
   // Estado para paginación
   const [currentPage, setCurrentPage] = useState(0);
