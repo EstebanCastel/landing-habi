@@ -120,7 +120,10 @@ function HomeContent() {
   });
 
   // Mapear tipo_inmueble_id a nombre legible
-  const getTipoInmueble = (tipoId: string | null | undefined): string => {
+  const getTipoInmueble = (tipoId: string | null | undefined, uuid?: string | null): string => {
+    // Hardcoded overrides
+    if (uuid === '90bcbde3-4d8d-45b0-bc11-951869bff4eb') return 'Casa en condominio';
+    
     if (!tipoId) return DEFAULT_PROPERTY_DATA.tipoInmueble;
     const tipos: Record<string, string> = {
       '1': 'Apartamento',
@@ -147,7 +150,7 @@ function HomeContent() {
     direccion: bnplPrices?.direccion || DEFAULT_PROPERTY_DATA.direccion,
     habitaciones: bnplPrices?.numero_habitaciones ? Number(bnplPrices.numero_habitaciones) : DEFAULT_PROPERTY_DATA.habitaciones,
     banos: bnplPrices?.numero_de_banos ? Number(bnplPrices.numero_de_banos) : DEFAULT_PROPERTY_DATA.banos,
-    tipoInmueble: getTipoInmueble(bnplPrices?.tipo_inmueble_id),
+    tipoInmueble: getTipoInmueble(bnplPrices?.tipo_inmueble_id, dealUuid),
   };
 
   // Estados para modalidad de venta
