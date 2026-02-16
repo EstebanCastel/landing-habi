@@ -102,18 +102,21 @@ const getComponentProps = (
       };
       
     case 'ComparablesSection': {
-      // Evaluación = (base_sin_comisionHabi) / (1 - utilidadPct)
-      // base = precioComiteOrig + costos operativos + financiacion
-      // comisionHabi = evaluacion * utilidadPct (se calcula sobre la evaluacion total)
       let evaluacion = props.currentPrice;
       if (props.bnplPrices && props.costBreakdown) {
+        const isMx = props.bnplPrices.country === 'MX';
+        // MX: usar precio_comite_original (precio base del algoritmo)
+        // CO: usar currentPrice (precio mostrado al cliente)
+        const precioBase = isMx
+          ? Number(props.bnplPrices.precio_comite_original || props.bnplPrices.precio_comite || 0)
+          : props.currentPrice;
         const costosSinUtilidad =
           props.costBreakdown.comision.total +
           props.costBreakdown.gastosMensuales.total +
           props.costBreakdown.tarifaServicio.costoFinanciacion +
           props.costBreakdown.tramites.total +
           props.costBreakdown.remodelacion.total;
-        const baseSinComisionHabi = props.currentPrice + costosSinUtilidad;
+        const baseSinComisionHabi = precioBase + costosSinUtilidad;
         const utilidadPct = props.costBreakdown.tarifaServicio.utilidadEsperada;
         evaluacion = utilidadPct < 1
           ? Math.round(baseSinComisionHabi / (1 - utilidadPct))

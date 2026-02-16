@@ -392,9 +392,11 @@ export default function HabiDirectSection({
   // Periodo estimado de venta en meses (para MX, basado en AMS del HESH)
   const periodoMeses = Math.ceil((costBreakdown?.tarifaServicio.ams || 90) / 30);
 
-  // Base sin comision Habi = precio oferta mostrado + costos operativos + financiacion
-  const baseSinComisionHabi = costBreakdown && currentPrice > 0
-    ? currentPrice + comisionTotal + propertyMensual + costoFinanciacionHesh + costosTramites + costosRemodelacion
+  // MX: usar precio_comite_original (precio base algoritmo)
+  // CO: usar currentPrice (precio mostrado al cliente)
+  const precioBaseEvaluacion = isMx ? precioComiteOriginalMain : currentPrice;
+  const baseSinComisionHabi = costBreakdown && precioBaseEvaluacion > 0
+    ? precioBaseEvaluacion + comisionTotal + propertyMensual + costoFinanciacionHesh + costosTramites + costosRemodelacion
     : valorMercado;
   
   // Evaluacion = base / (1 - utilidadPct), comisionHabi = evaluacion * utilidadPct
