@@ -57,6 +57,7 @@ function PricingSummary({
   
   // Detectar si es México (no tiene arras)
   const isMx = bnplPrices?.country === 'MX';
+  const isAlianza = !isMx && bnplPrices?.quiere_ofertar_alianza?.toLowerCase().trim() === 'si';
 
   // Calcular las arras según forma de pago
   const getArras = () => {
@@ -262,15 +263,19 @@ function PricingSummary({
           <div className="flex justify-between items-start">
             <div>
               <p className="font-semibold text-gray-900">
-                {hasBnpl && configuration.formaPago !== 'contado'
-                  ? 'Pago primera cuota al escriturar'
-                  : 'Arras al firmar'
+                {isAlianza
+                  ? 'Pago de tu inmueble'
+                  : hasBnpl && configuration.formaPago !== 'contado'
+                    ? 'Pago primera cuota al escriturar'
+                    : 'Arras al firmar'
                 }
               </p>
               <p className="text-xs text-gray-500 mt-0.5">
-                {hasBnpl && configuration.formaPago !== 'contado'
-                  ? `Recibirás ${numCuotas} pagos iguales`
-                  : 'Primer pago (10% del valor)'
+                {isAlianza
+                  ? 'Primero pagamos al banco el saldo de tu hipoteca y luego te pagamos el saldo restante.'
+                  : hasBnpl && configuration.formaPago !== 'contado'
+                    ? `Recibirás ${numCuotas} pagos iguales`
+                    : 'Primer pago (10% del valor)'
                 }
               </p>
             </div>
@@ -483,7 +488,7 @@ export default function HabiDirectSection({
                   </p>
                   <p className="text-xs text-gray-500 mb-2">
                     Estos gastos existen incluso si vendes por tu cuenta.<br />
-                    {isMx ? 'TuHabi' : 'Habi'} se encarga desde el momento de la escritura.
+                    {isMx ? 'TuHabi' : 'Habi'} se encarga desde {isAlianza ? 'la entrega del inmueble' : 'el momento de la escritura'}.
                   </p>
                   <button
                     onClick={() => { setShowExpenseCalculator(true); analytics.calculatorOpened(bnplPrices?.country); }}
