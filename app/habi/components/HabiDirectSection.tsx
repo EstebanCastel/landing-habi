@@ -257,30 +257,36 @@ function PricingSummary({
         </p>
       </div>
 
-      {/* Arras / Primera cuota - Solo para Colombia */}
-      {!isMx && (
+      {/* Arras / Primera cuota - Solo para Colombia, no alianza */}
+      {!isMx && !isAlianza && (
         <div className="bg-gray-50 rounded-xl p-4 mb-6">
           <div className="flex justify-between items-start">
             <div>
               <p className="font-semibold text-gray-900">
-                {isAlianza
-                  ? 'Pago de tu inmueble'
-                  : hasBnpl && configuration.formaPago !== 'contado'
-                    ? 'Pago primera cuota al escriturar'
-                    : 'Arras al firmar'
+                {hasBnpl && configuration.formaPago !== 'contado'
+                  ? 'Pago primera cuota al escriturar'
+                  : 'Arras al firmar'
                 }
               </p>
               <p className="text-xs text-gray-500 mt-0.5">
-                {isAlianza
-                  ? 'Primero pagamos al banco el saldo de tu hipoteca y luego te pagamos el saldo restante.'
-                  : hasBnpl && configuration.formaPago !== 'contado'
-                    ? `Recibirás ${numCuotas} pagos iguales`
-                    : 'Primer pago (10% del valor)'
+                {hasBnpl && configuration.formaPago !== 'contado'
+                  ? `Recibirás ${numCuotas} pagos iguales`
+                  : 'Primer pago (10% del valor)'
                 }
               </p>
             </div>
             <p className="text-xl font-bold text-gray-900">{formatPrice(arras)}</p>
           </div>
+        </div>
+      )}
+
+      {/* Alianza: info de pago sin montos */}
+      {!isMx && isAlianza && (
+        <div className="bg-purple-50 rounded-xl p-4 mb-6 border border-purple-100">
+          <p className="font-semibold text-purple-900">Pago de tu inmueble</p>
+          <p className="text-xs text-purple-700 mt-1">
+            Primero pagamos al banco el saldo de tu hipoteca y luego te pagamos el saldo restante.
+          </p>
         </div>
       )}
 
