@@ -442,7 +442,7 @@ export default function HabiDirectSection({
       <div id="configurator-section" className="p-6 bg-white border-b border-gray-200">
         <h3 className="text-xl font-bold mb-2">Así se construye tu oferta</h3>
         <p className="text-sm text-gray-600 mb-6">
-          Elige qué quieres que {isMx ? 'TuHabi' : 'Habi'} se encargue y cómo prefieres recibir tu dinero.
+          Conoce los gastos asociados a tu inmueble. En {isMx ? 'TuHabi' : 'Habi'} queremos ser transparentes contigo en cada paso del proceso.
         </p>
 
         <div className="space-y-4">

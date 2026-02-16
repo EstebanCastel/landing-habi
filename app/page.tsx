@@ -295,8 +295,7 @@ function HomeContent() {
 
   // ─── Analytics: pageview, scroll depth, tiempo en página (ONLY for group C) ───
   useEffect(() => {
-    // Skip GA/Segment analytics for group A (landing basica)
-    if (abcGroup === 'A') return;
+    // Track analytics for both groups A and B
 
     const country = bnplPrices?.country ?? 'CO';
     analytics.pageView(dealUuid ? `offer_${dealUuid}` : 'home', { dealUuid: dealUuid || undefined, country });
@@ -718,7 +717,16 @@ function HomeContent() {
 
   // A/B Test: A = landing basica, B = landing modular (Colombia only)
   if (bnplPrices && abcGroup === 'A') {
-    return <LandingB properties={bnplPrices} dealUuid={dealUuid} />;
+    return (
+      <>
+        <GoogleAnalytics />
+        <SegmentScript />
+        <Suspense fallback={null}>
+          <PageViewTracker />
+        </Suspense>
+        <LandingB properties={bnplPrices} dealUuid={dealUuid} />
+      </>
+    );
   }
 
   // Waiting for AB group assignment (show loading briefly) - CO or undefined country
