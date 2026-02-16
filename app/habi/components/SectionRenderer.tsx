@@ -107,14 +107,13 @@ const getComponentProps = (
       // comisionHabi = evaluacion * utilidadPct (se calcula sobre la evaluacion total)
       let evaluacion = props.currentPrice;
       if (props.bnplPrices && props.costBreakdown) {
-        const precioComiteOrig = Number(props.bnplPrices.precio_comite_original || props.bnplPrices.precio_comite || 0);
         const costosSinUtilidad =
           props.costBreakdown.comision.total +
           props.costBreakdown.gastosMensuales.total +
           props.costBreakdown.tarifaServicio.costoFinanciacion +
           props.costBreakdown.tramites.total +
           props.costBreakdown.remodelacion.total;
-        const baseSinComisionHabi = precioComiteOrig + costosSinUtilidad;
+        const baseSinComisionHabi = props.currentPrice + costosSinUtilidad;
         const utilidadPct = props.costBreakdown.tarifaServicio.utilidadEsperada;
         evaluacion = utilidadPct < 1
           ? Math.round(baseSinComisionHabi / (1 - utilidadPct))
