@@ -2,9 +2,10 @@
 
 import { Montserrat } from "next/font/google"
 import Image from "next/image"
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import type { HubSpotProperties } from "../lib/hubspot"
 import OfferCountdown from "../habi/components/OfferCountdown"
+import { analytics, initScrollTracking, initPageTimeTracking } from "../lib/analytics"
 
 const montserrat = Montserrat({ subsets: ["latin"] })
 
@@ -26,6 +27,18 @@ interface LandingBProps {
 
 export default function LandingB({ properties, dealUuid }: LandingBProps) {
   const [_forceUpdate] = useState(0)
+
+  // Analytics tracking for landing A
+  useEffect(() => {
+    const country = properties.country || 'CO';
+    analytics.pageView(`offer_landing_a_${dealUuid}`, { dealUuid, country });
+    const cleanupScroll = initScrollTracking(country);
+    const cleanupTime = initPageTimeTracking(country);
+    return () => {
+      if (cleanupScroll) cleanupScroll();
+      if (cleanupTime) cleanupTime();
+    };
+  }, [dealUuid, properties.country]);
 
   // Determinar si BNPL esta habilitado
   const bnplEnabled = properties.negocio_aplica_para_bnpl?.toLowerCase() === '1' 
