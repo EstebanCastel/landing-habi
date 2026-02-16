@@ -105,11 +105,12 @@ const getComponentProps = (
       let evaluacion = props.currentPrice;
       if (props.bnplPrices && props.costBreakdown) {
         const isMx = props.bnplPrices.country === 'MX';
-        // MX: usar precio_comite_original (precio base del algoritmo)
-        // CO: usar currentPrice (precio mostrado al cliente)
+        // Evaluacion siempre usa precio de 1 cuota (contado), no cambia con cuotas
+        // MX: precio_comite_original (precio base algoritmo)
+        // CO: precio_comite (precio contado / 1 cuota)
         const precioBase = isMx
           ? Number(props.bnplPrices.precio_comite_original || props.bnplPrices.precio_comite || 0)
-          : props.currentPrice;
+          : Number(props.bnplPrices.precio_comite || 0);
         const costosSinUtilidad =
           props.costBreakdown.comision.total +
           props.costBreakdown.gastosMensuales.total +
