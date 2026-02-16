@@ -764,9 +764,9 @@ function HomeContent() {
             <Image
               src="/casa.svg"
               alt="Tu inmueble"
-              width={400}
-              height={400}
-              className="w-52 h-52 sm:w-60 sm:h-60 object-contain"
+              width={500}
+              height={500}
+              className="w-40 h-40 sm:w-48 sm:h-48 object-contain scale-150"
               priority
             />
           </div>
@@ -848,9 +848,9 @@ function HomeContent() {
               <Image
                 src="/casa.svg"
                 alt="Tu inmueble"
-                width={600}
-                height={600}
-                className="w-[28rem] h-[28rem] lg:w-[34rem] lg:h-[34rem] xl:w-[40rem] xl:h-[40rem] object-contain"
+                width={800}
+                height={800}
+                className="w-[32rem] h-[32rem] lg:w-[40rem] lg:h-[40rem] xl:w-[48rem] xl:h-[48rem] object-contain"
                 priority
               />
             </div>

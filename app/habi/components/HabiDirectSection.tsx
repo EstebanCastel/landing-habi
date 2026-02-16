@@ -478,7 +478,7 @@ export default function HabiDirectSection({
                   </p>
                   <p className="text-xs text-gray-500 mb-2">
                     Estos gastos existen incluso si vendes por tu cuenta.<br />
-                    Habi los asume por ti desde el inicio.
+                    {isMx ? 'TuHabi' : 'Habi'} se encarga desde el momento de la escritura.
                   </p>
                   <button
                     onClick={() => { setShowExpenseCalculator(true); analytics.calculatorOpened(bnplPrices?.country); }}
