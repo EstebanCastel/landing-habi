@@ -380,49 +380,7 @@ export default function LandingB({ properties, dealUuid }: LandingBProps) {
         </div>
       </div>
 
-      {/* Visit Section */}
-      <div className="bg-white py-8 sm:py-12 lg:py-16 px-4 sm:px-6 print-visit-section">
-        <div className="max-w-6xl mx-auto">
-          <div className="rounded-[1.5rem] sm:rounded-[2rem] lg:rounded-[4rem] overflow-hidden"
-               style={{ background: "linear-gradient(135deg, #7400C2 0%, #430070 100%)" }}>
-            <div className="flex flex-col lg:flex-row items-stretch">
-              <div className="flex-1 p-6 sm:p-8 lg:p-12 xl:p-16 text-white text-center lg:text-left">
-                <h2 className={`${montserrat.className} mb-6 sm:mb-8`}>
-                  <span className="block text-3xl sm:text-4xl lg:text-5xl xl:text-6xl font-black mb-2 sm:mb-4" style={{ color: "#EACDFE" }}>
-                    Síentete como en casa,
-                  </span>
-                  <span className="block text-2xl sm:text-3xl lg:text-4xl xl:text-5xl font-bold">
-                    agenda una visita a
-                  </span>
-                  <span className="block text-2xl sm:text-3xl lg:text-4xl xl:text-5xl font-bold">
-                    nuestras oficinas
-                  </span>
-                </h2>
-                <p className="text-white text-sm sm:text-base mb-6 sm:mb-8 leading-relaxed max-w-lg mx-auto lg:mx-0">
-                  Recuerda que puedes buscarnos y agendar una visita en persona a nuestras oficinas, sabemos que es muy importante poder arreglar detalles frente a frente.
-                </p>
-                <button 
-                  onClick={() => handleWhatsAppRedirect('visita')}
-                  className="bg-white hover:bg-gray-100 text-purple-700 font-semibold px-6 sm:px-8 py-3 sm:py-4 rounded-full text-base sm:text-lg transition-all duration-200 shadow-lg hover:shadow-xl transform hover:scale-105"
-                >
-                  Agendar visita
-                </button>
-              </div>
-              <div className="flex-1 relative h-64 sm:h-80 lg:h-auto">
-                <Image 
-                  src="/logo/imagen3.png?v=2" 
-                  alt="Visita nuestras oficinas" 
-                  width={500} 
-                  height={400} 
-                  loading="lazy"
-                  className="absolute top-0 right-0 bottom-0 w-auto h-full object-cover"
-                  style={{ objectPosition: "40% center" }}
-                />
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
+      {/* Visit Section - oculta */}
 
       {/* Testimonials Section */}
       <div className="bg-white py-12 sm:py-16 lg:py-20 px-4 sm:px-6 print-page-break">
