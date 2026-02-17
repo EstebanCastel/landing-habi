@@ -145,7 +145,7 @@ function PricingSummary({
   const utilidadEsperadaSummaryPct = costBreakdown
     ? costBreakdown.tarifaServicio.utilidadEsperada
     : 0.032;
-  const bnplPercentageSummary = (() => {
+  const bnplDescuentoSummary = (() => {
     if (!bnplPrices || configuration.formaPago === 'contado') return 0;
     const precioBase = Number(bnplPrices.precio_comite || 0);
     if (precioBase === 0) return 0;
@@ -155,9 +155,9 @@ function PricingSummary({
       '9cuotas': bnplPrices.bnpl9,
     };
     const precioCuota = Number(bnplMap[configuration.formaPago] || 0);
-    return precioCuota > precioBase ? (precioCuota - precioBase) / precioBase : 0;
+    return precioCuota > precioBase ? precioCuota - precioBase : 0;
   })();
-  const costoFinanciacionSummary = costoFinanciacionSummaryHesh * (1 - bnplPercentageSummary);
+  const costoFinanciacionSummary = Math.max(0, costoFinanciacionSummaryHesh - bnplDescuentoSummary);
   const financiacionPctSummary = evaluacionInmueble > 0
     ? ((costoFinanciacionSummary / evaluacionInmueble) * 100).toFixed(1)
     : '3.0';
@@ -397,8 +397,8 @@ export default function HabiDirectSection({
   // evaluacion = (base_sin_comisionHabi) / (1 - utilidadPct)
   // comisionHabi = evaluacion * utilidadPct
 
-  // Costo financiacion dinamico: disminuye cuando hay cuotas (el extra % se resta)
-  const bnplPercentage = (() => {
+  // Costo financiacion dinamico: al pagar a cuotas, el % extra sobre precio_comite se descuenta de la tarifa
+  const bnplDescuento = (() => {
     if (!bnplPrices || configuration.formaPago === 'contado') return 0;
     const precioBase = Number(bnplPrices.precio_comite || 0);
     if (precioBase === 0) return 0;
@@ -408,9 +408,9 @@ export default function HabiDirectSection({
       '9cuotas': bnplPrices.bnpl9,
     };
     const precioCuota = Number(bnplMap[configuration.formaPago] || 0);
-    return precioCuota > precioBase ? (precioCuota - precioBase) / precioBase : 0;
+    return precioCuota > precioBase ? precioCuota - precioBase : 0;
   })();
-  const costoFinanciacionDinamico = costoFinanciacionHesh * (1 - bnplPercentage);
+  const costoFinanciacionDinamico = Math.max(0, costoFinanciacionHesh - bnplDescuento);
 
   // Periodo estimado de venta en meses (para MX, basado en AMS del HESH)
   const periodoMeses = Math.ceil((costBreakdown?.tarifaServicio.ams || 90) / 30);
