@@ -105,14 +105,21 @@ function PricingSummary({
     ? (currentPrice * paymentOption.percentage) / 100
     : 0;
   
-  // Evaluación del inmueble = precio_comite_ORIGINAL + TODOS los costos HESH (constante)
-  // Siempre usa el precio del comité original (no el negociado) para la evaluación
+  // Evaluación del inmueble = misma formula que SectionRenderer y HabiDirectSection main
+  // base = precio_contado + costos sin utilidad, evaluacion = base / (1 - utilidadPct)
   const precioComiteOriginal = bnplPrices
     ? Number(bnplPrices.precio_comite_original || bnplPrices.precio_comite || 0)
     : 0;
-  const evaluacionInmueble = costBreakdown && precioComiteOriginal > 0
-    ? precioComiteOriginal + comisionTotal + propertyMensual + gananciaHabiHesh +
+  const isMxSummary = bnplPrices?.country === 'MX';
+  const precioContadoSummary = isMxSummary ? precioComiteOriginal : Number(bnplPrices?.precio_comite || 0);
+  const costoFinanciacionSummaryBase = costBreakdown ? costBreakdown.tarifaServicio.costoFinanciacion : valorMercado * 0.03;
+  const utilidadPctSummaryBase = costBreakdown ? costBreakdown.tarifaServicio.utilidadEsperada : 0.032;
+  const baseSummary = costBreakdown && precioContadoSummary > 0
+    ? precioContadoSummary + comisionTotal + propertyMensual + costoFinanciacionSummaryBase +
       (costBreakdown.tramites.total) + (costBreakdown.remodelacion.total)
+    : valorMercado;
+  const evaluacionInmueble = utilidadPctSummaryBase < 1 && baseSummary !== valorMercado
+    ? Math.round(baseSummary / (1 - utilidadPctSummaryBase))
     : valorMercado;
 
   // Tarifa de servicio: condicional según si el comercial negoció
