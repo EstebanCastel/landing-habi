@@ -72,16 +72,21 @@ interface InmuebleData {
 
 // Regex para detectar UUID en el pathname
 const UUID_REGEX = /^\/([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})$/i;
+// Regex para detectar cualquier ID en el pathname (ej: /123, /abc)
+const ANY_ID_REGEX = /^\/([^/]+)$/;
 
 function HomeContent() {
   const searchParams = useSearchParams();
   const pathname = usePathname();
   
-  // Detectar deal_uuid desde query param (?deal_uuid=...) o desde el path (/uuid)
+  // Detectar deal_uuid desde query param (?deal_uuid=...) o desde el path (/uuid o /123)
   const dealUuidFromQuery = searchParams.get('deal_uuid')?.trim() ?? null;
   const pathMatch = pathname.match(UUID_REGEX);
   const dealUuidFromPath = pathMatch ? pathMatch[1] : null;
-  const dealUuid = dealUuidFromQuery || dealUuidFromPath;
+  // Fallback: cualquier ruta de un segmento (ej: /123) que no sea la raiz
+  const anyIdMatch = !dealUuidFromPath && pathname !== '/' ? pathname.match(ANY_ID_REGEX) : null;
+  const dealUuidFromAnyPath = anyIdMatch ? anyIdMatch[1] : null;
+  const dealUuid = dealUuidFromQuery || dealUuidFromPath || dealUuidFromAnyPath;
   
   // Soporte para nid directo (?nid=...) — permite consultar BigQuery sin depender de HubSpot
   // Uso: http://localhost:3000?nid=46452147125 (para desarrollo/testing)
