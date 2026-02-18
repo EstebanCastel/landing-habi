@@ -161,15 +161,23 @@ export async function GET(request: NextRequest) {
       )
     }
 
-    // 3. Validar UUID
+    // 3. Validar UUID (si no es UUID valido, intentar como deal_id numerico)
+    let useAsDealId = dealId;
+    let useAsDealUuid = dealUuid;
     if (dealUuid) {
       const sanitized = sanitizeUUID(dealUuid)
       if (!isValidUUID(sanitized)) {
-        console.warn(`Invalid UUID format: ${dealUuid} from IP: ${clientIp}`)
-        return NextResponse.json(
-          { error: 'Invalid UUID format' },
-          { status: 400, headers }
-        )
+        // No es UUID - podria ser un deal_id numerico o alias de prueba
+        if (/^\d+$/.test(dealUuid)) {
+          useAsDealId = dealUuid;
+          useAsDealUuid = null;
+        } else {
+          console.warn(`Invalid UUID format: ${dealUuid} from IP: ${clientIp}`)
+          return NextResponse.json(
+            { error: 'Invalid UUID format' },
+            { status: 400, headers }
+          )
+        }
       }
     }
 
@@ -185,12 +193,12 @@ export async function GET(request: NextRequest) {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     let dealResult: { id: string; properties: Record<string, any> } | null = null
     
-    if (dealId) {
-      dealResult = await getDealById(dealId, apiKey)
+    if (useAsDealId) {
+      dealResult = await getDealById(useAsDealId, apiKey)
     }
     
-    if (!dealResult && dealUuid) {
-      const sanitized = sanitizeUUID(dealUuid)
+    if (!dealResult && useAsDealUuid) {
+      const sanitized = sanitizeUUID(useAsDealUuid)
       dealResult = await searchDealByUuid(sanitized, apiKey)
     }
     
