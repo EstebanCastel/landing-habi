@@ -224,10 +224,10 @@ function HomeContent() {
       return Math.abs(hash);
     };
 
-    const groups: ('A' | 'B')[] = ['A', 'B'];
-    const group = groups[hashUuid(dealUuid) % 2];
+    const groups: ('A' | 'B' | 'C')[] = ['A', 'B', 'C'];
+    const group = groups[hashUuid(dealUuid) % 3];
     
-    console.log(`[AB Test] Deal ${dealUuid} -> hash ${hashUuid(dealUuid)} -> group: ${group}`);
+    console.log(`[ABC Test] Deal ${dealUuid} -> hash ${hashUuid(dealUuid)} -> group: ${group}`);
     setAbcGroup(group);
 
     // Track assignment in PostHog for analytics
@@ -298,7 +298,8 @@ function HomeContent() {
 
   // ─── Analytics: pageview, scroll depth, tiempo en página (ONLY for group C) ───
   useEffect(() => {
-    // Track analytics for both groups A and B
+    // Skip GA/Segment for groups A and B (landing basica has its own tracking)
+    if (abcGroup === 'A' || abcGroup === 'B') return;
 
     const country = bnplPrices?.country ?? 'CO';
     analytics.pageView(dealUuid ? `offer_${dealUuid}` : 'home', { dealUuid: dealUuid || undefined, country });
@@ -306,8 +307,8 @@ function HomeContent() {
     const cleanupScroll = initScrollTracking(country);
     const cleanupPageTime = initPageTimeTracking(country);
 
-    // Enable PostHog session recording for group B (modular landing)
-    if (abcGroup === 'B') {
+    // Enable PostHog session recording for group C (modular landing)
+    if (abcGroup === 'C') {
       try { posthog.startSessionRecording(); } catch { /* ignore if not available */ }
     }
 
@@ -718,8 +719,8 @@ function HomeContent() {
     );
   }
 
-  // A/B Test: A = landing basica, B = landing modular (Colombia only)
-  if (bnplPrices && abcGroup === 'A') {
+  // ABC Test: A y B = landing basica, C = landing modular (Colombia only)
+  if (bnplPrices && (abcGroup === 'A' || abcGroup === 'B')) {
     return (
       <>
         <GoogleAnalytics />
@@ -732,7 +733,7 @@ function HomeContent() {
     );
   }
 
-  // Waiting for AB group assignment (show loading briefly) - CO or undefined country
+  // Waiting for ABC group assignment (show loading briefly) - CO or undefined country
   if (bnplPrices && !abcGroup && (bnplPrices.country === 'CO' || !bnplPrices.country)) {
     return (
       <div className="min-h-screen bg-white flex items-center justify-center">
@@ -743,7 +744,7 @@ function HomeContent() {
     );
   }
 
-  // Group B (or MX): Render the modular landing (current)
+  // Group C (or MX): Render the modular landing (current)
   return (
     <main className="min-h-screen bg-white flex flex-col">
       {/* Analytics only for Group C */}
