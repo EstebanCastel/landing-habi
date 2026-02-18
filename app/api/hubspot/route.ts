@@ -161,25 +161,9 @@ export async function GET(request: NextRequest) {
       )
     }
 
-    // 3. Validar UUID (si no es UUID valido, intentar como deal_id numerico)
-    let useAsDealId = dealId;
-    let useAsDealUuid = dealUuid;
-    if (dealUuid) {
-      const sanitized = sanitizeUUID(dealUuid)
-      if (!isValidUUID(sanitized)) {
-        // No es UUID - podria ser un deal_id numerico o alias de prueba
-        if (/^\d+$/.test(dealUuid)) {
-          useAsDealId = dealUuid;
-          useAsDealUuid = null;
-        } else {
-          console.warn(`Invalid UUID format: ${dealUuid} from IP: ${clientIp}`)
-          return NextResponse.json(
-            { error: 'Invalid UUID format' },
-            { status: 400, headers }
-          )
-        }
-      }
-    }
+    // 3. Validar UUID (acepta cualquier formato para busqueda por deal_uuid en HubSpot)
+    const useAsDealId = dealId;
+    const useAsDealUuid = dealUuid;
 
     // 4. Verificar token
     const apiKey = process.env.HUBSPOT_ACCESS_TOKEN
@@ -198,8 +182,7 @@ export async function GET(request: NextRequest) {
     }
     
     if (!dealResult && useAsDealUuid) {
-      const sanitized = sanitizeUUID(useAsDealUuid)
-      dealResult = await searchDealByUuid(sanitized, apiKey)
+      dealResult = await searchDealByUuid(useAsDealUuid.trim(), apiKey)
     }
     
     // 6. Deal no encontrado
