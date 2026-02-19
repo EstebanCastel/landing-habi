@@ -97,7 +97,8 @@ export default function LiquiditySection({ configuration, valorMercado, currentP
       ? parseFloat(customRate) 
       : (credit.minRate + credit.maxRate) / 2;
     
-    const monthlyRate = rateToUse / 100 / 12;
+    // Convertir tasa Efectiva Anual a tasa mensual: (1 + EA)^(1/12) - 1
+    const monthlyRate = Math.pow(1 + rateToUse / 100, 1 / 12) - 1;
 
     const monthlyPayment =
       amountNeeded *
