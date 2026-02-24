@@ -566,7 +566,10 @@ export default function HabiDirectSection({
             <div className="flex-1">
               <p className="font-medium text-sm mb-2">Comisión {isMx ? 'TuHabi' : 'Habi'}</p>
               <p className="text-xs text-gray-600 mb-1">
-                Ganancia de {isMx ? 'TuHabi' : 'Habi'} del <strong>{comisionHabiPct}%</strong> por la compra de tu inmueble.
+                {isMx
+                  ? <>Comisión del <strong>1.5%</strong> + servicios profesionales.</>
+                  : <>Ganancia de Habi del <strong>{comisionHabiPct}%</strong> por la compra de tu inmueble.</>
+                }
               </p>
             </div>
             <div className="text-right ml-4">
