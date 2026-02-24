@@ -157,14 +157,22 @@ function PricingSummary({
     const precioCuota = Number(bnplMap[configuration.formaPago] || 0);
     return precioCuota > precioBase ? precioCuota - precioBase : 0;
   })();
-  const costoFinanciacionSummary = Math.max(0, costoFinanciacionSummaryHesh - bnplDescuentoSummary);
+  const costoFinanciacionSummaryRaw = Math.max(0, costoFinanciacionSummaryHesh - bnplDescuentoSummary);
+  const comisionHabiSummaryOriginal = Math.round(evaluacionInmueble * utilidadEsperadaSummaryPct);
+  // MX: Comision TuHabi = 1.5% evaluacion + 10,000 MXN
+  const comisionHabiSummary = isMxSummary
+    ? Math.round(evaluacionInmueble * 0.015 + 10000)
+    : (precioComiteOriginal > 0 ? precioComiteOriginal * utilidadEsperadaSummaryPct : valorMercado * utilidadEsperadaSummaryPct);
+  const tarifaExtraSummary = isMxSummary
+    ? Math.max(0, comisionHabiSummaryOriginal - comisionHabiSummary)
+    : 0;
+  const costoFinanciacionSummary = costoFinanciacionSummaryRaw + tarifaExtraSummary;
   const financiacionPctSummary = evaluacionInmueble > 0
     ? ((costoFinanciacionSummary / evaluacionInmueble) * 100).toFixed(1)
     : '3.0';
-  const comisionHabiSummary = precioComiteOriginal > 0
-    ? precioComiteOriginal * utilidadEsperadaSummaryPct
-    : valorMercado * utilidadEsperadaSummaryPct;
-  const comisionHabiPctSummary = (utilidadEsperadaSummaryPct * 100).toFixed(1);
+  const comisionHabiPctSummary = evaluacionInmueble > 0
+    ? ((comisionHabiSummary / evaluacionInmueble) * 100).toFixed(1)
+    : (utilidadEsperadaSummaryPct * 100).toFixed(1);
 
   return (
     <div id="cta-final-section" className="px-6 py-6 bg-white border-t border-gray-200">
@@ -428,7 +436,16 @@ export default function HabiDirectSection({
   const evaluacionMain = utilidadEsperadaPct < 1
     ? Math.round(baseSinComisionHabi / (1 - utilidadEsperadaPct))
     : baseSinComisionHabi;
-  const comisionHabiUtilidad = evaluacionMain - baseSinComisionHabi;
+  const comisionHabiOriginal = evaluacionMain - baseSinComisionHabi;
+
+  // MX: Comision TuHabi = 1.5% evaluacion + 10,000 MXN. Diferencia va a tarifa de servicio.
+  const comisionHabiUtilidad = isMx
+    ? Math.round(evaluacionMain * 0.015 + 10000)
+    : comisionHabiOriginal;
+  const tarifaServicioExtra = isMx
+    ? Math.max(0, comisionHabiOriginal - comisionHabiUtilidad)
+    : 0;
+  const costoFinanciacionDisplay = costoFinanciacionDinamico + tarifaServicioExtra;
 
   // Costos fijos (sin comision Habi ni financiacion)
   const hayComercialMain = bnplPrices?.bnpl_1_comercial_raw != null;
@@ -452,7 +469,7 @@ export default function HabiDirectSection({
     ? ((costBreakdown.tramites.total / askPrice) * 100).toFixed(1)
     : COSTOS_PERCENTAGES.tramites.toString();
   const financiacionPct = evaluacionMain > 0
-    ? ((costoFinanciacionDinamico / evaluacionMain) * 100).toFixed(1)
+    ? ((costoFinanciacionDisplay / evaluacionMain) * 100).toFixed(1)
     : '3.0';
   const comisionHabiPct = evaluacionMain > 0
     ? ((comisionHabiUtilidad / evaluacionMain) * 100).toFixed(1)
@@ -537,9 +554,9 @@ export default function HabiDirectSection({
               )}
             </div>
             <div className="text-right ml-4">
-              <p className="font-semibold">{formatPrice(isAlianza ? costoFinanciacionDinamico + costosTramites : costoFinanciacionDinamico)}</p>
+              <p className="font-semibold">{formatPrice(isAlianza ? costoFinanciacionDisplay + costosTramites : costoFinanciacionDisplay)}</p>
               <p className="text-xs text-gray-500">{isAlianza
-                ? (evaluacionMain > 0 ? (((costoFinanciacionDinamico + costosTramites) / evaluacionMain) * 100).toFixed(1) : financiacionPct)
+                ? (evaluacionMain > 0 ? (((costoFinanciacionDisplay + costosTramites) / evaluacionMain) * 100).toFixed(1) : financiacionPct)
                 : financiacionPct}%</p>
             </div>
           </div>
