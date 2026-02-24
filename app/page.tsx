@@ -88,6 +88,9 @@ function HomeContent() {
   const dealUuidFromAnyPath = anyIdMatch ? anyIdMatch[1] : null;
   const dealUuid = dealUuidFromQuery || dealUuidFromPath || dealUuidFromAnyPath;
   
+  // Force group override para testing (?force_group=A/B/C)
+  const forceGroup = searchParams.get('force_group')?.toUpperCase() ?? null;
+
   // Soporte para nid directo (?nid=...) — permite consultar BigQuery sin depender de HubSpot
   // Uso: http://localhost:3000?nid=46452147125 (para desarrollo/testing)
   const directNid = searchParams.get('nid')?.trim() ?? null;
@@ -225,9 +228,11 @@ function HomeContent() {
     };
 
     const groups: ('A' | 'B' | 'C')[] = ['A', 'B', 'C'];
-    const group = groups[hashUuid(dealUuid) % 3];
+    const group = (forceGroup && ['A', 'B', 'C'].includes(forceGroup))
+      ? forceGroup as 'A' | 'B' | 'C'
+      : groups[hashUuid(dealUuid) % 3];
     
-    console.log(`[ABC Test] Deal ${dealUuid} -> hash ${hashUuid(dealUuid)} -> group: ${group}`);
+    console.log(`[ABC Test] Deal ${dealUuid} -> group: ${group}${forceGroup ? ' (forced)' : ''}`);
     setAbcGroup(group);
 
     // Track assignment in PostHog for analytics

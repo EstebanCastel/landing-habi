@@ -17,21 +17,28 @@ const headers = {
 function getBigQueryClient(): BigQuery {
   const projectId = process.env.GOOGLE_CLOUD_PROJECT || 'sellers-main-prod'
   
-  // Si hay credenciales como JSON string en env var
+  // Intentar credenciales principales
   const credentialsJson = process.env.GOOGLE_CLOUD_CREDENTIALS
   if (credentialsJson) {
     try {
       const credentials = JSON.parse(credentialsJson)
-      return new BigQuery({
-        projectId,
-        credentials,
-      })
+      return new BigQuery({ projectId, credentials })
     } catch (e) {
       console.error('Error parsing GOOGLE_CLOUD_CREDENTIALS:', e)
     }
   }
   
-  // Usar ADC o GOOGLE_APPLICATION_CREDENTIALS
+  // Fallback: credenciales alternativas
+  const fallbackJson = process.env.GOOGLE_CLOUD_CREDENTIALS_FALLBACK
+  if (fallbackJson) {
+    try {
+      const credentials = JSON.parse(fallbackJson)
+      return new BigQuery({ projectId, credentials })
+    } catch (e) {
+      console.error('Error parsing GOOGLE_CLOUD_CREDENTIALS_FALLBACK:', e)
+    }
+  }
+  
   return new BigQuery({ projectId })
 }
 

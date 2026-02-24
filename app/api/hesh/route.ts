@@ -17,6 +17,15 @@ function getBigQueryClient(): BigQuery {
       console.error('Error parsing GOOGLE_CLOUD_CREDENTIALS:', e)
     }
   }
+  const fallbackJson = process.env.GOOGLE_CLOUD_CREDENTIALS_FALLBACK
+  if (fallbackJson) {
+    try {
+      const credentials = JSON.parse(fallbackJson)
+      return new BigQuery({ projectId, credentials })
+    } catch (e) {
+      console.error('Error parsing GOOGLE_CLOUD_CREDENTIALS_FALLBACK:', e)
+    }
+  }
   return new BigQuery({ projectId })
 }
 
