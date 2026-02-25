@@ -296,6 +296,9 @@ function PricingSummary({
             </div>
             <p className="text-xl font-bold text-gray-900">{formatPrice(arras)}</p>
           </div>
+          <p className="text-[10px] text-gray-400 mt-2">
+            * Si el inmueble tiene patrimonio de familia con hijo menor de edad, no aplican arras. Se realiza un solo pago al finalizar el proceso.
+          </p>
         </div>
       )}
 
