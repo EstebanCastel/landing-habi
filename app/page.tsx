@@ -115,9 +115,16 @@ function HomeContent() {
   // Datos de costos HESH (desglose real)
   const [costBreakdown, setCostBreakdown] = useState<HeshCostBreakdown | null>(null);
 
-  const mapComparables = useMemo(() => {
+  // Filtrar comparables: P50 inferior solo para UUIDs especificos
+  const P50_UUIDS = ['ab6cfb56-4413-43da-8113-7ca819f27536'];
+  const filteredComparables = useMemo(() => {
+    if (dealUuid && P50_UUIDS.includes(dealUuid) && comparables.length > 0) {
+      const sorted = [...comparables].sort((a, b) => a.lastAskPrice - b.lastAskPrice);
+      return sorted.slice(0, Math.ceil(sorted.length / 2));
+    }
     return comparables;
-  }, [comparables, bnplPrices?.country]);
+  }, [comparables, dealUuid]);
+  const mapComparables = filteredComparables;
   
   // Configuración de la oferta
   // tramites/remodelacion default 'habi' = Habi se encarga (secciones de toggle deshabilitadas por ahora)
@@ -839,7 +846,7 @@ function HomeContent() {
             onComparablesRef={handleRefCallback}
             onSaleModalityRef={handleRefCallback}
             onDonationRef={handleRefCallback}
-            comparables={comparables}
+            comparables={filteredComparables}
             selectedComparable={selectedComparable}
             onSelectComparable={setSelectedComparable}
             bnplPrices={bnplPrices}
@@ -929,7 +936,7 @@ function HomeContent() {
             onComparablesRef={handleRefCallback}
             onSaleModalityRef={handleRefCallback}
             onDonationRef={handleRefCallback}
-            comparables={comparables}
+            comparables={filteredComparables}
             selectedComparable={selectedComparable}
             onSelectComparable={setSelectedComparable}
             bnplPrices={bnplPrices}
