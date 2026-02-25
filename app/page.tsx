@@ -115,15 +115,15 @@ function HomeContent() {
   // Datos de costos HESH (desglose real)
   const [costBreakdown, setCostBreakdown] = useState<HeshCostBreakdown | null>(null);
 
-  // Filtrar comparables: P50 inferior solo para UUIDs especificos
-  const P50_UUIDS = ['ab6cfb56-4413-43da-8113-7ca819f27536'];
+  // Filtrar comparables: P50 inferior para Colombia
+  const isCOComparables = bnplPrices?.country === 'CO' || !bnplPrices?.country;
   const filteredComparables = useMemo(() => {
-    if (dealUuid && P50_UUIDS.includes(dealUuid) && comparables.length > 0) {
+    if (isCOComparables && comparables.length > 0) {
       const sorted = [...comparables].sort((a, b) => a.lastAskPrice - b.lastAskPrice);
       return sorted.slice(0, Math.ceil(sorted.length / 2));
     }
     return comparables;
-  }, [comparables, dealUuid]);
+  }, [comparables, isCOComparables]);
   const mapComparables = filteredComparables;
   
   // Configuración de la oferta

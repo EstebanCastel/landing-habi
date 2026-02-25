@@ -32,7 +32,7 @@ export async function GET(request: NextRequest) {
 
     if (existing) {
       const startedAt = new Date(existing.started_at)
-      const expiresAt = new Date(startedAt.getTime() + 48 * 60 * 60 * 1000)
+      const expiresAt = new Date(startedAt.getTime() + 24 * 60 * 60 * 1000)
       return NextResponse.json({
         started_at: startedAt.toISOString(),
         expires_at: expiresAt.toISOString(),
@@ -41,7 +41,7 @@ export async function GET(request: NextRequest) {
 
     // Create new countdown
     const now = new Date()
-    const expiresAt = new Date(now.getTime() + 48 * 60 * 60 * 1000)
+    const expiresAt = new Date(now.getTime() + 24 * 60 * 60 * 1000)
 
     const { error: insertError } = await supabase
       .from('offer_countdown')
