@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useRef, useCallback } from 'react';
+import Image from 'next/image';
 
 interface NegotiationSystemProps {
   currentPrice: number;
@@ -50,6 +51,7 @@ export default function NegotiationSystem({ currentPrice, dealUuid, enabled }: N
   const [agreed, setAgreed] = useState(false);
   const [round, setRound] = useState(0);
   const [isThinking, setIsThinking] = useState(false);
+  const [waitingForAction, setWaitingForAction] = useState(false); // waiting for user to accept/counter/reject
   const historyEndRef = useRef<HTMLDivElement>(null);
 
   // Triggers
@@ -68,10 +70,10 @@ export default function NegotiationSystem({ currentPrice, dealUuid, enabled }: N
       triggeredRef.current = true;
       setIsOpen(true);
       setHistory([{
-        from: 'habi',
-        amount: currentPrice,
+        from: 'habi', amount: currentPrice,
         message: 'Nuestra oferta inicial por tu inmueble.',
       }]);
+      setWaitingForAction(true);
     }
   }, [dismissed, isOpen, currentPrice]);
 
@@ -88,8 +90,7 @@ export default function NegotiationSystem({ currentPrice, dealUuid, enabled }: N
       const dir = window.scrollY > lastY ? 'down' : 'up';
       lastY = window.scrollY;
       if (lastScrollDirRef.current && dir !== lastScrollDirRef.current) {
-        scrollChangesRef.current += 1;
-        triggerCheck();
+        scrollChangesRef.current += 1; triggerCheck();
       }
       lastScrollDirRef.current = dir;
     };
@@ -104,6 +105,7 @@ export default function NegotiationSystem({ currentPrice, dealUuid, enabled }: N
         triggeredRef.current = true;
         setIsOpen(true);
         setHistory([{ from: 'habi', amount: currentPrice, message: 'Nuestra oferta inicial por tu inmueble.' }]);
+        setWaitingForAction(true);
       }
     };
     document.addEventListener('mouseleave', handle);
@@ -114,9 +116,7 @@ export default function NegotiationSystem({ currentPrice, dealUuid, enabled }: N
     if (!enabled) return;
     const handle = (e: MouseEvent) => {
       const t = e.target as HTMLElement;
-      if (t.closest('button')?.textContent?.includes('Continuar') || t.closest('a')?.href?.includes('wa.me')) {
-        ctaClickedRef.current = true;
-      }
+      if (t.closest('button')?.textContent?.includes('Continuar') || t.closest('a')?.href?.includes('wa.me')) ctaClickedRef.current = true;
     };
     document.addEventListener('click', handle);
     return () => document.removeEventListener('click', handle);
@@ -128,87 +128,61 @@ export default function NegotiationSystem({ currentPrice, dealUuid, enabled }: N
 
   const addHabiResponse = useCallback((entries: BidEntry[], finalAgreed?: boolean) => {
     setIsThinking(true);
-    // Mostrar "Revisando..." por 2 segundos
-    const thinkingEntry: BidEntry = { from: 'system', amount: 0, message: 'Estamos revisando tu contraoferta...' };
-    setHistory(prev => [...prev, thinkingEntry]);
-
+    setHistory(prev => [...prev, { from: 'system', amount: 0, message: 'Estamos revisando tu contraoferta...' }]);
     setTimeout(() => {
       setIsThinking(false);
-      // Remover el "thinking" y agregar la respuesta real
-      setHistory(prev => {
-        const withoutThinking = prev.filter(e => e.from !== 'system');
-        return [...withoutThinking, ...entries];
-      });
+      setHistory(prev => [...prev.filter(e => e.from !== 'system'), ...entries]);
       if (finalAgreed) setAgreed(true);
-    }, 2000);
+      else setWaitingForAction(true);
+    }, 2500);
   }, []);
 
+  // User clicks "Contraofertar" -> show bid controls
+  const handleStartCounter = () => {
+    setWaitingForAction(false);
+    setClientBid(currentPrice + STEP);
+  };
+
+  // User submits their counter bid
   const handleSubmitBid = () => {
     if (clientBid <= currentPrice || agreed || round >= 3 || isThinking) return;
-
     const newRound = round + 1;
     setRound(newRound);
+    setWaitingForAction(false);
+
+    setHistory(prev => [...prev, { from: 'client', amount: clientBid, message: 'Mi propuesta' }]);
 
     const zone = getZone(clientBid, currentPrice);
-    
-    // Agregar bid del cliente inmediatamente
-    setHistory(prev => [...prev, {
-      from: 'client',
-      amount: clientBid,
-      message: `Mi propuesta`,
-    }]);
-
     if (zone === 'optimal') {
-      addHabiResponse([{
-        from: 'habi',
-        amount: clientBid,
-        message: '¡Aceptamos tu propuesta! Tu asesor te contactará para continuar.',
-      }], true);
+      addHabiResponse([{ from: 'habi', amount: clientBid, message: '¡Aceptamos tu propuesta! Tu asesor te contactará.' }], true);
       return;
     }
 
     const counter = generateCounterOffer(clientBid, currentPrice);
-
     if (newRound >= 3) {
-      addHabiResponse([{
-        from: 'habi',
-        amount: counter,
-        message: `Esta es nuestra mejor oferta. Es lo máximo que podemos ofrecer.`,
-      }]);
-      return;
-    }
-
-    if (zone === 'minimum') {
-      addHabiResponse([{
-        from: 'habi',
-        amount: counter,
-        message: `Podemos subir a ${formatPrice(counter)}. ¿Te parece?`,
-      }]);
+      addHabiResponse([{ from: 'habi', amount: counter, message: 'Esta es nuestra mejor oferta. Es lo máximo que podemos ofrecer.' }]);
+    } else if (zone === 'minimum') {
+      addHabiResponse([{ from: 'habi', amount: counter, message: `Podemos subir a ${formatPrice(counter)}. ¿Te parece?` }]);
     } else {
-      addHabiResponse([{
-        from: 'habi',
-        amount: counter,
-        message: `Ese valor está fuera de nuestro rango. Lo máximo que podemos ofrecer es ${formatPrice(counter)}.`,
-      }]);
+      addHabiResponse([{ from: 'habi', amount: counter, message: `Ese valor está fuera de nuestro rango. Lo máximo: ${formatPrice(counter)}.` }]);
     }
-
     setClientBid(counter);
   };
 
-  const handleAcceptLastOffer = () => {
+  // User accepts last Habi offer
+  const handleAccept = () => {
     const lastHabi = [...history].reverse().find(h => h.from === 'habi');
-    if (lastHabi && !agreed) {
-      setHistory(prev => [...prev, {
-        from: 'client',
-        amount: lastHabi.amount,
-        message: 'Acepto esta propuesta.',
-      }]);
-      addHabiResponse([{
-        from: 'habi',
-        amount: lastHabi.amount,
-        message: '¡Excelente! Tu asesor se pondrá en contacto para confirmar los detalles.',
-      }], true);
-    }
+    if (!lastHabi || agreed) return;
+    setWaitingForAction(false);
+    setHistory(prev => [...prev, { from: 'client', amount: lastHabi.amount, message: 'Acepto esta propuesta.' }]);
+    addHabiResponse([{ from: 'habi', amount: lastHabi.amount, message: '¡Excelente! Tu asesor se pondrá en contacto para confirmar.' }], true);
+  };
+
+  // User rejects
+  const handleReject = () => {
+    setWaitingForAction(false);
+    setHistory(prev => [...prev, { from: 'client', amount: 0, message: 'No me interesa por ahora.' }]);
+    setTimeout(() => { setDismissed(true); setIsOpen(false); }, 1000);
   };
 
   const handleStartEdit = () => {
@@ -226,7 +200,7 @@ export default function NegotiationSystem({ currentPrice, dealUuid, enabled }: N
 
   const maxRoundsReached = round >= 3;
   const pctDiff = clientBid > currentPrice ? ((clientBid - currentPrice) / currentPrice * 100).toFixed(1) : '0.0';
-  const hasHabiOffer = history.some(h => h.from === 'habi' && h.amount > 0);
+  const showBidControls = !waitingForAction && !agreed && !isThinking;
 
   return (
     <div className="fixed inset-0 bg-black/50 z-[100] flex items-end sm:items-center justify-center">
@@ -234,9 +208,12 @@ export default function NegotiationSystem({ currentPrice, dealUuid, enabled }: N
         
         {/* Header */}
         <div className="bg-gradient-to-r from-purple-600 to-purple-800 p-4 sm:rounded-t-2xl rounded-t-2xl flex justify-between items-center">
-          <div>
-            <h3 className="text-white font-bold text-base">Negociación</h3>
-            <p className="text-purple-200 text-xs">Ronda {Math.min(round + 1, 3)} de 3</p>
+          <div className="flex items-center gap-3">
+            <Image src="/Logo-1200x1200.png" alt="Habi" width={32} height={32} className="rounded-lg" />
+            <div>
+              <h3 className="text-white font-bold text-base">Negociación</h3>
+              <p className="text-purple-200 text-xs">Ronda {Math.min(round + 1, 3)} de 3</p>
+            </div>
           </div>
           <button onClick={() => { setDismissed(true); setIsOpen(false); }} className="text-purple-200 hover:text-white p-1">
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -245,35 +222,35 @@ export default function NegotiationSystem({ currentPrice, dealUuid, enabled }: N
           </button>
         </div>
 
-        {/* Bid history */}
-        <div className="flex-1 overflow-y-auto p-4 space-y-3 min-h-[200px] max-h-[400px] bg-gray-50">
+        {/* Chat history */}
+        <div className="flex-1 overflow-y-auto p-4 space-y-3 min-h-[220px] max-h-[400px] bg-gray-50">
           {history.map((entry, i) => {
             if (entry.from === 'system') {
               return (
                 <div key={i} className="flex justify-start">
-                  <div className="bg-white border border-gray-200 rounded-2xl rounded-tl-sm px-4 py-3 max-w-[80%]">
+                  <div className="bg-white border border-gray-200 rounded-2xl rounded-tl-sm px-4 py-3 max-w-[85%]">
                     <div className="flex items-center gap-2">
                       <div className="flex gap-1">
-                        <div className="w-2 h-2 bg-purple-400 rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
-                        <div className="w-2 h-2 bg-purple-400 rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
-                        <div className="w-2 h-2 bg-purple-400 rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
+                        <div className="w-1.5 h-1.5 bg-purple-400 rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
+                        <div className="w-1.5 h-1.5 bg-purple-400 rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
+                        <div className="w-1.5 h-1.5 bg-purple-400 rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
                       </div>
-                      <p className="text-sm text-gray-500 italic">{entry.message}</p>
+                      <p className="text-xs text-gray-500 italic">{entry.message}</p>
                     </div>
                   </div>
                 </div>
               );
             }
             return (
-              <div key={i} className={`flex ${entry.from === 'client' ? 'justify-end' : 'justify-start'}`}>
-                <div className={`max-w-[80%] rounded-2xl px-4 py-2.5 ${
+              <div key={i} className={`flex ${entry.from === 'client' ? 'justify-end' : 'justify-start'} items-end gap-2`}>
+                {entry.from === 'habi' && (
+                  <Image src="/Logo-1200x1200.png" alt="Habi" width={28} height={28} className="rounded-full flex-shrink-0 mb-1" />
+                )}
+                <div className={`max-w-[75%] rounded-2xl px-4 py-2.5 ${
                   entry.from === 'habi'
-                    ? 'bg-white border border-gray-200 rounded-tl-sm'
-                    : 'bg-purple-600 text-white rounded-tr-sm'
+                    ? 'bg-white border border-gray-200 rounded-bl-sm'
+                    : 'bg-purple-600 text-white rounded-br-sm'
                 }`}>
-                  <p className={`text-xs mb-1 font-semibold ${entry.from === 'habi' ? 'text-purple-600' : 'text-purple-200'}`}>
-                    {entry.from === 'habi' ? 'Habi' : 'Tú'}
-                  </p>
                   <p className={`text-sm ${entry.from === 'habi' ? 'text-gray-700' : 'text-white'}`}>
                     {entry.message}
                   </p>
@@ -283,13 +260,20 @@ export default function NegotiationSystem({ currentPrice, dealUuid, enabled }: N
                     </p>
                   )}
                 </div>
+                {entry.from === 'client' && (
+                  <div className="w-7 h-7 bg-purple-100 rounded-full flex items-center justify-center flex-shrink-0 mb-1">
+                    <svg className="w-4 h-4 text-purple-600" fill="currentColor" viewBox="0 0 20 20">
+                      <path d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" />
+                    </svg>
+                  </div>
+                )}
               </div>
             );
           })}
           <div ref={historyEndRef} />
         </div>
 
-        {/* Input area */}
+        {/* Action area */}
         <div className="border-t border-gray-200 p-4 bg-white sm:rounded-b-2xl">
           {agreed ? (
             <div className="text-center py-2">
@@ -299,30 +283,46 @@ export default function NegotiationSystem({ currentPrice, dealUuid, enabled }: N
                 </svg>
                 <span className="font-semibold text-sm">Acuerdo registrado</span>
               </div>
-              <button onClick={() => { setDismissed(true); setIsOpen(false); }} className="text-sm text-purple-600 font-medium">
-                Cerrar
+              <button onClick={() => { setDismissed(true); setIsOpen(false); }} className="text-sm text-purple-600 font-medium">Cerrar</button>
+            </div>
+          ) : waitingForAction ? (
+            /* 3 clear action buttons after Habi responds */
+            <div className="space-y-2">
+              <p className="text-xs text-gray-500 text-center mb-2">¿Qué te gustaría hacer?</p>
+              <button onClick={handleAccept} className="w-full bg-green-600 text-white py-3 rounded-xl font-semibold hover:bg-green-700 transition text-sm flex items-center justify-center gap-2">
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>
+                Aceptar oferta
+              </button>
+              {!maxRoundsReached && (
+                <button onClick={handleStartCounter} className="w-full bg-purple-600 text-white py-3 rounded-xl font-semibold hover:bg-purple-700 transition text-sm flex items-center justify-center gap-2">
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4" /></svg>
+                  Contraofertar
+                </button>
+              )}
+              <button onClick={handleReject} className="w-full bg-gray-100 text-gray-600 py-3 rounded-xl font-medium hover:bg-gray-200 transition text-sm">
+                No me interesa
               </button>
             </div>
-          ) : (
+          ) : showBidControls ? (
+            /* Bid controls: DiDi style */
             <>
-              {/* DiDi-style bid control */}
-              <div className="flex items-center justify-center gap-3 mb-3">
+              <p className="text-xs text-gray-500 text-center mb-3">Ajusta tu propuesta</p>
+              <div className="flex items-center justify-center gap-4 mb-4">
                 <button
                   onClick={() => setClientBid(prev => Math.max(currentPrice + STEP, prev - STEP))}
-                  disabled={isThinking}
-                  className="w-12 h-12 rounded-full border-2 border-gray-300 flex items-center justify-center text-gray-600 hover:border-purple-400 hover:text-purple-600 transition text-sm font-bold disabled:opacity-40"
+                  className="w-14 h-14 rounded-full border-2 border-gray-300 flex items-center justify-center text-gray-700 hover:border-purple-400 hover:text-purple-600 hover:bg-purple-50 transition font-bold text-base"
                 >
-                  -{STEP / 1000000 >= 1 ? `${STEP / 1000000}M` : `${STEP / 1000}K`}
+                  -0.5
                 </button>
                 
                 <div 
-                  className="flex-1 max-w-[180px] bg-gray-100 rounded-xl px-4 py-3 text-center cursor-pointer hover:bg-gray-200 transition"
+                  className="flex-1 max-w-[200px] bg-gray-100 rounded-2xl px-5 py-4 text-center cursor-pointer hover:bg-gray-200 transition"
                   onClick={handleStartEdit}
                 >
                   {editingPrice ? (
                     <input
                       type="text"
-                      value={editValue}
+                      value={`$ ${Number(editValue).toLocaleString('es-CO')}`}
                       onChange={(e) => setEditValue(e.target.value.replace(/[^\d]/g, ''))}
                       onBlur={handleFinishEdit}
                       onKeyDown={(e) => e.key === 'Enter' && handleFinishEdit()}
@@ -333,51 +333,34 @@ export default function NegotiationSystem({ currentPrice, dealUuid, enabled }: N
                     <>
                       <p className="text-xl font-bold text-gray-900">{formatPrice(clientBid)}</p>
                       {clientBid > currentPrice && (
-                        <p className="text-[10px] text-green-600 font-medium">+{pctDiff}%</p>
+                        <p className="text-xs text-green-600 font-medium mt-0.5">+{pctDiff}%</p>
                       )}
-                      <p className="text-[9px] text-gray-400 mt-0.5">Toca para editar</p>
+                      <p className="text-[9px] text-gray-400 mt-1">Toca para editar</p>
                     </>
                   )}
                 </div>
 
                 <button
                   onClick={() => setClientBid(prev => Math.min(Math.round(currentPrice * 1.15), prev + STEP))}
-                  disabled={isThinking}
-                  className="w-12 h-12 rounded-full border-2 border-gray-300 flex items-center justify-center text-gray-600 hover:border-purple-400 hover:text-purple-600 transition text-sm font-bold disabled:opacity-40"
+                  className="w-14 h-14 rounded-full border-2 border-gray-300 flex items-center justify-center text-gray-700 hover:border-purple-400 hover:text-purple-600 hover:bg-purple-50 transition font-bold text-base"
                 >
-                  +{STEP / 1000000 >= 1 ? `${STEP / 1000000}M` : `${STEP / 1000}K`}
+                  +0.5
                 </button>
               </div>
 
-              <div className="flex gap-2">
-                <button
-                  onClick={handleSubmitBid}
-                  disabled={clientBid <= currentPrice || isThinking || maxRoundsReached}
-                  className="flex-1 bg-purple-600 text-white py-3 rounded-xl font-semibold hover:bg-purple-700 transition disabled:opacity-40 disabled:cursor-not-allowed text-sm"
-                >
-                  {isThinking ? 'Esperando...' : 'Enviar propuesta'}
-                </button>
-                {hasHabiOffer && !maxRoundsReached && (
-                  <button
-                    onClick={handleAcceptLastOffer}
-                    disabled={isThinking}
-                    className="px-4 bg-green-600 text-white py-3 rounded-xl font-semibold hover:bg-green-700 transition disabled:opacity-40 text-sm"
-                  >
-                    Aceptar
-                  </button>
-                )}
-                {maxRoundsReached && (
-                  <button
-                    onClick={handleAcceptLastOffer}
-                    disabled={isThinking}
-                    className="flex-1 bg-green-600 text-white py-3 rounded-xl font-semibold hover:bg-green-700 transition disabled:opacity-40 text-sm"
-                  >
-                    Aceptar última oferta
-                  </button>
-                )}
-              </div>
+              <button
+                onClick={handleSubmitBid}
+                disabled={clientBid <= currentPrice}
+                className="w-full bg-purple-600 text-white py-3 rounded-xl font-semibold hover:bg-purple-700 transition disabled:opacity-40 disabled:cursor-not-allowed text-sm"
+              >
+                Enviar propuesta
+              </button>
             </>
-          )}
+          ) : isThinking ? (
+            <div className="text-center py-3">
+              <p className="text-sm text-gray-500">Revisando tu propuesta...</p>
+            </div>
+          ) : null}
         </div>
       </div>
     </div>
