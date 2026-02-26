@@ -90,7 +90,10 @@ function HomeContent() {
   const dealUuid = dealUuidFromQuery || dealUuidFromPath || dealUuidFromAnyPath;
   
   // Force group override para testing (?force_group=A/B/C)
-  const forceGroup = searchParams.get('force_group')?.toUpperCase() ?? null;
+  // Force group: desde query param o rutas de prueba
+  const TEST_FORCE_C = ['123'];
+  const forceGroupParam = searchParams.get('force_group')?.toUpperCase() ?? null;
+  const forceGroup = forceGroupParam || (dealUuid && TEST_FORCE_C.includes(dealUuid) ? 'C' : null);
 
   // Soporte para nid directo (?nid=...) — permite consultar BigQuery sin depender de HubSpot
   // Uso: http://localhost:3000?nid=46452147125 (para desarrollo/testing)
