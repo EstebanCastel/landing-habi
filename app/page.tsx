@@ -462,8 +462,23 @@ function HomeContent() {
       return;
     }
 
+    // Mock comparables para UUID 123 (testing)
+    if (dealUuid === '123') {
+      const mockComparables = [
+        { id: 'mock-1', nid: '1', latitude: 4.711, longitude: -74.0721, area: '75 m²', lastAskPrice: 95000000, valormt2: 1266667, features: '3 hab, 2 baños', address: 'Calle 100 #15-20', condominium: 'Torres del Parque', floorNum: '5', yearsOld: '8', banos: '2', garage: '1', habitaciones: '3', confidenceLevel: 'high', category: 'similar' },
+        { id: 'mock-2', nid: '2', latitude: 4.713, longitude: -74.0695, area: '82 m²', lastAskPrice: 105000000, valormt2: 1280488, features: '3 hab, 2 baños', address: 'Carrera 11 #93-45', condominium: 'Edificio Monterrey', floorNum: '3', yearsOld: '12', banos: '2', garage: '1', habitaciones: '3', confidenceLevel: 'high', category: 'similar' },
+        { id: 'mock-3', nid: '3', latitude: 4.709, longitude: -74.0735, area: '68 m²', lastAskPrice: 88000000, valormt2: 1294118, features: '2 hab, 2 baños', address: 'Calle 97 #18-30', condominium: 'Conjunto Residencial Norte', floorNum: '8', yearsOld: '5', banos: '2', garage: '1', habitaciones: '2', confidenceLevel: 'medium', category: 'similar' },
+        { id: 'mock-4', nid: '4', latitude: 4.715, longitude: -74.0680, area: '90 m²', lastAskPrice: 115000000, valormt2: 1277778, features: '3 hab, 3 baños', address: 'Carrera 7 #100-10', condominium: 'Torres del Bosque', floorNum: '10', yearsOld: '3', banos: '3', garage: '2', habitaciones: '3', confidenceLevel: 'high', category: 'similar' },
+        { id: 'mock-5', nid: '5', latitude: 4.707, longitude: -74.0750, area: '72 m²', lastAskPrice: 92000000, valormt2: 1277778, features: '3 hab, 2 baños', address: 'Calle 94 #20-15', condominium: 'Edificio Santa Ana', floorNum: '6', yearsOld: '15', banos: '2', garage: '1', habitaciones: '3', confidenceLevel: 'medium', category: 'similar' },
+        { id: 'mock-6', nid: '6', latitude: 4.712, longitude: -74.0710, area: '85 m²', lastAskPrice: 110000000, valormt2: 1294118, features: '3 hab, 2 baños', address: 'Carrera 15 #96-50', condominium: 'Conjunto Los Cedros', floorNum: '4', yearsOld: '7', banos: '2', garage: '1', habitaciones: '3', confidenceLevel: 'high', category: 'similar' },
+      ];
+      setComparables(mockComparables);
+      setInmueble({ latitude: 4.711, longitude: -74.0721, area: '78 m²', last_ask_price: 100000000 });
+      setIsLoading(false);
+      return;
+    }
+
     // CO: Prioridad: 1) nid directo por URL, 2) nid de HubSpot
-    // Ya no hay fallback a datos estáticos - si no hay datos válidos, se muestra página de error
     if (directNid) {
       loadFromBigQuery(directNid);
     } else if (bnplPrices?.nid) {
