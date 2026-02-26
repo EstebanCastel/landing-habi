@@ -4,35 +4,17 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import Image from 'next/image';
 
 interface NegotiationSystemProps {
-  currentPrice: number;
+  currentPrice: number;  // precio base (el menor)
   dealUuid: string;
   enabled: boolean;
+  precioIntermedio: number;  // objetivo de cierre
+  precioMaximo: number;      // techo absoluto
 }
-
-type NegotiationZone = 'optimal' | 'minimum' | 'outOfRange';
 
 interface BidEntry {
   from: 'client' | 'habi' | 'system';
   amount: number;
   message: string;
-}
-
-function getZone(proposed: number, basePrice: number): NegotiationZone {
-  const optimalLimit = basePrice * 1.04;
-  const minimumLimit = basePrice * 1.08;
-  if (proposed <= optimalLimit) return 'optimal';
-  if (proposed <= minimumLimit) return 'minimum';
-  return 'outOfRange';
-}
-
-function generateCounterOffer(proposed: number, basePrice: number): number {
-  const zone = getZone(proposed, basePrice);
-  if (zone === 'optimal') return proposed;
-  if (zone === 'minimum') {
-    const optimalMax = basePrice * 1.04;
-    return Math.round((optimalMax + proposed) / 2);
-  }
-  return Math.round(basePrice * 1.06);
 }
 
 function formatPrice(price: number): string {
@@ -41,7 +23,7 @@ function formatPrice(price: number): string {
 
 const STEP = 500000;
 
-export default function NegotiationSystem({ currentPrice, dealUuid, enabled }: NegotiationSystemProps) {
+export default function NegotiationSystem({ currentPrice, dealUuid, enabled, precioIntermedio, precioMaximo }: NegotiationSystemProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [dismissed, setDismissed] = useState(false);
   const [clientBid, setClientBid] = useState(currentPrice);
@@ -49,9 +31,10 @@ export default function NegotiationSystem({ currentPrice, dealUuid, enabled }: N
   const [editValue, setEditValue] = useState('');
   const [history, setHistory] = useState<BidEntry[]>([]);
   const [agreed, setAgreed] = useState(false);
-  const [round, setRound] = useState(0);
   const [isThinking, setIsThinking] = useState(false);
-  const [waitingForAction, setWaitingForAction] = useState(false); // waiting for user to accept/counter/reject
+  const [waitingForAction, setWaitingForAction] = useState(false);
+  const [lastHabiOffer, setLastHabiOffer] = useState(currentPrice);
+  const [finalChance, setFinalChance] = useState(false); // ultimo intento con el millon extra
   const historyEndRef = useRef<HTMLDivElement>(null);
 
   // Triggers
@@ -63,16 +46,11 @@ export default function NegotiationSystem({ currentPrice, dealUuid, enabled }: N
 
   const triggerCheck = useCallback(() => {
     if (triggeredRef.current || dismissed || isOpen) return;
-    const timeOk = timeRef.current >= 15;
-    const scrollOk = scrollChangesRef.current >= 4;
-    const noCta = !ctaClickedRef.current;
-    if ((timeOk && noCta) || (scrollOk && noCta)) {
+    if ((timeRef.current >= 15 && !ctaClickedRef.current) || (scrollChangesRef.current >= 4 && !ctaClickedRef.current)) {
       triggeredRef.current = true;
       setIsOpen(true);
-      setHistory([{
-        from: 'habi', amount: currentPrice,
-        message: 'Nuestra oferta inicial por tu inmueble.',
-      }]);
+      setHistory([{ from: 'habi', amount: currentPrice, message: 'Nuestra oferta inicial por tu inmueble.' }]);
+      setLastHabiOffer(currentPrice);
       setWaitingForAction(true);
     }
   }, [dismissed, isOpen, currentPrice]);
@@ -89,9 +67,7 @@ export default function NegotiationSystem({ currentPrice, dealUuid, enabled }: N
     const handle = () => {
       const dir = window.scrollY > lastY ? 'down' : 'up';
       lastY = window.scrollY;
-      if (lastScrollDirRef.current && dir !== lastScrollDirRef.current) {
-        scrollChangesRef.current += 1; triggerCheck();
-      }
+      if (lastScrollDirRef.current && dir !== lastScrollDirRef.current) { scrollChangesRef.current += 1; triggerCheck(); }
       lastScrollDirRef.current = dir;
     };
     window.addEventListener('scroll', handle, { passive: true });
@@ -102,10 +78,9 @@ export default function NegotiationSystem({ currentPrice, dealUuid, enabled }: N
     if (!enabled || dismissed) return;
     const handle = (e: MouseEvent) => {
       if (e.clientY <= 0 && !triggeredRef.current && !isOpen) {
-        triggeredRef.current = true;
-        setIsOpen(true);
+        triggeredRef.current = true; setIsOpen(true);
         setHistory([{ from: 'habi', amount: currentPrice, message: 'Nuestra oferta inicial por tu inmueble.' }]);
-        setWaitingForAction(true);
+        setLastHabiOffer(currentPrice); setWaitingForAction(true);
       }
     };
     document.addEventListener('mouseleave', handle);
@@ -122,9 +97,7 @@ export default function NegotiationSystem({ currentPrice, dealUuid, enabled }: N
     return () => document.removeEventListener('click', handle);
   }, [enabled]);
 
-  useEffect(() => {
-    historyEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [history, isThinking]);
+  useEffect(() => { historyEndRef.current?.scrollIntoView({ behavior: 'smooth' }); }, [history, isThinking]);
 
   const addHabiResponse = useCallback((entries: BidEntry[], finalAgreed?: boolean) => {
     setIsThinking(true);
@@ -137,59 +110,88 @@ export default function NegotiationSystem({ currentPrice, dealUuid, enabled }: N
     }, 2500);
   }, []);
 
-  // User clicks "Contraofertar" -> show bid controls
-  const handleStartCounter = () => {
-    setWaitingForAction(false);
-    setClientBid(currentPrice + STEP);
-  };
-
-  // User submits their counter bid
+  /*
+   * MOTOR DE NEGOCIACION:
+   * - precio_comite (currentPrice) = oferta base (la menor)
+   * - precio_intermedio = objetivo de cierre ideal
+   * - precio_maximo = techo absoluto
+   *
+   * Logica:
+   * 1. Cliente pide <= precio_intermedio → se lo doy de una
+   * 2. Cliente pide > precio_intermedio pero <= precio_maximo → le doy precio_intermedio
+   *    - Si acepta → cierra en precio_intermedio
+   *    - Si contraoferta → siguiente ronda
+   * 3. Cliente pide > precio_maximo → le doy precio_maximo - 1M
+   *    - Si acepta → cierra en precio_maximo - 1M
+   *    - Si rechaza ("No me interesa") → le doy el millon restante (precio_maximo)
+   *
+   * Las ofertas de Habi siempre son incrementales (nunca bajan)
+   */
   const handleSubmitBid = () => {
-    if (clientBid <= currentPrice || agreed || round >= 3 || isThinking) return;
-    const newRound = round + 1;
-    setRound(newRound);
+    if (clientBid <= currentPrice || agreed || isThinking) return;
     setWaitingForAction(false);
 
     setHistory(prev => [...prev, { from: 'client', amount: clientBid, message: 'Mi propuesta' }]);
 
-    const zone = getZone(clientBid, currentPrice);
-    if (zone === 'optimal') {
-      addHabiResponse([{ from: 'habi', amount: clientBid, message: '¡Aceptamos tu propuesta! Tu asesor te contactará.' }], true);
+    // Zona 1: cliente pide <= intermedio → aceptar
+    if (clientBid <= precioIntermedio) {
+      const offer = Math.max(clientBid, lastHabiOffer); // nunca bajar
+      setLastHabiOffer(offer);
+      addHabiResponse([{ from: 'habi', amount: offer, message: '¡Aceptamos tu propuesta! Tu asesor te contactará.' }], true);
       return;
     }
 
-    const counter = generateCounterOffer(clientBid, currentPrice);
-    if (newRound >= 3) {
-      addHabiResponse([{ from: 'habi', amount: counter, message: 'Esta es nuestra mejor oferta. Es lo máximo que podemos ofrecer.' }]);
-    } else if (zone === 'minimum') {
-      addHabiResponse([{ from: 'habi', amount: counter, message: `Podemos subir a ${formatPrice(counter)}. ¿Te parece?` }]);
-    } else {
-      addHabiResponse([{ from: 'habi', amount: counter, message: `Ese valor está fuera de nuestro rango. Lo máximo: ${formatPrice(counter)}.` }]);
+    // Zona 2: cliente pide > intermedio pero <= maximo → ofrecer intermedio (o mas si ya subimos)
+    if (clientBid <= precioMaximo) {
+      const offer = Math.max(precioIntermedio, lastHabiOffer); // nunca bajar
+      setLastHabiOffer(offer);
+      addHabiResponse([{ from: 'habi', amount: offer, message: `Podemos ofrecerte ${formatPrice(offer)}. ¿Te parece?` }]);
+      return;
     }
-    setClientBid(counter);
+
+    // Zona 3: cliente pide > maximo → ofrecer maximo - 1M
+    const offerPreFinal = Math.max(precioMaximo - 1000000, lastHabiOffer);
+    setLastHabiOffer(offerPreFinal);
+    setFinalChance(true);
+    addHabiResponse([{
+      from: 'habi', amount: offerPreFinal,
+      message: `Ese valor está por encima de nuestro rango. Lo máximo que podemos ofrecer es ${formatPrice(offerPreFinal)}.`,
+    }]);
   };
 
-  // User accepts last Habi offer
-  const handleAccept = () => {
-    const lastHabi = [...history].reverse().find(h => h.from === 'habi');
-    if (!lastHabi || agreed) return;
+  const handleStartCounter = () => {
     setWaitingForAction(false);
-    setHistory(prev => [...prev, { from: 'client', amount: lastHabi.amount, message: 'Acepto esta propuesta.' }]);
-    addHabiResponse([{ from: 'habi', amount: lastHabi.amount, message: '¡Excelente! Tu asesor se pondrá en contacto para confirmar.' }], true);
+    setClientBid(lastHabiOffer + STEP);
   };
 
-  // User rejects
+  const handleAccept = () => {
+    if (agreed) return;
+    setWaitingForAction(false);
+    setHistory(prev => [...prev, { from: 'client', amount: lastHabiOffer, message: 'Acepto esta propuesta.' }]);
+    addHabiResponse([{ from: 'habi', amount: lastHabiOffer, message: '¡Excelente! Tu asesor se pondrá en contacto para confirmar.' }], true);
+  };
+
   const handleReject = () => {
     setWaitingForAction(false);
+
+    // Si estamos en "final chance" y rechaza, darle el millon extra
+    if (finalChance && lastHabiOffer < precioMaximo) {
+      setHistory(prev => [...prev, { from: 'client', amount: 0, message: 'No me convence...' }]);
+      const finalOffer = precioMaximo;
+      setLastHabiOffer(finalOffer);
+      setFinalChance(false);
+      addHabiResponse([{
+        from: 'habi', amount: finalOffer,
+        message: `Espera, hemos hecho un último esfuerzo. Te ofrecemos ${formatPrice(finalOffer)}. Es nuestro máximo absoluto.`,
+      }]);
+      return;
+    }
+
     setHistory(prev => [...prev, { from: 'client', amount: 0, message: 'No me interesa por ahora.' }]);
     setTimeout(() => { setDismissed(true); setIsOpen(false); }, 1000);
   };
 
-  const handleStartEdit = () => {
-    setEditingPrice(true);
-    setEditValue(clientBid.toString());
-  };
-
+  const handleStartEdit = () => { setEditingPrice(true); setEditValue(clientBid.toString()); };
   const handleFinishEdit = () => {
     const val = parseInt(editValue.replace(/\D/g, '')) || currentPrice;
     setClientBid(Math.max(currentPrice + STEP, val));
@@ -198,7 +200,6 @@ export default function NegotiationSystem({ currentPrice, dealUuid, enabled }: N
 
   if (!enabled || !isOpen) return null;
 
-  const maxRoundsReached = round >= 3;
   const pctDiff = clientBid > currentPrice ? ((clientBid - currentPrice) / currentPrice * 100).toFixed(1) : '0.0';
   const showBidControls = !waitingForAction && !agreed && !isThinking;
 
@@ -212,7 +213,7 @@ export default function NegotiationSystem({ currentPrice, dealUuid, enabled }: N
             <Image src="/Logo-1200x1200.png" alt="Habi" width={32} height={32} className="rounded-lg" />
             <div>
               <h3 className="text-white font-bold text-base">Negociación</h3>
-              <p className="text-purple-200 text-xs">Ronda {Math.min(round + 1, 3)} de 3</p>
+              <p className="text-purple-200 text-xs">Tu oferta actual: {formatPrice(lastHabiOffer)}</p>
             </div>
           </div>
           <button onClick={() => { setDismissed(true); setIsOpen(false); }} className="text-purple-200 hover:text-white p-1">
@@ -247,24 +248,16 @@ export default function NegotiationSystem({ currentPrice, dealUuid, enabled }: N
                   <Image src="/Logo-1200x1200.png" alt="Habi" width={28} height={28} className="rounded-full flex-shrink-0 mb-1" />
                 )}
                 <div className={`max-w-[75%] rounded-2xl px-4 py-2.5 ${
-                  entry.from === 'habi'
-                    ? 'bg-white border border-gray-200 rounded-bl-sm'
-                    : 'bg-purple-600 text-white rounded-br-sm'
+                  entry.from === 'habi' ? 'bg-white border border-gray-200 rounded-bl-sm' : 'bg-purple-600 text-white rounded-br-sm'
                 }`}>
-                  <p className={`text-sm ${entry.from === 'habi' ? 'text-gray-700' : 'text-white'}`}>
-                    {entry.message}
-                  </p>
+                  <p className={`text-sm ${entry.from === 'habi' ? 'text-gray-700' : 'text-white'}`}>{entry.message}</p>
                   {entry.amount > 0 && (
-                    <p className={`text-lg font-bold mt-1 ${entry.from === 'habi' ? 'text-purple-700' : 'text-white'}`}>
-                      {formatPrice(entry.amount)}
-                    </p>
+                    <p className={`text-lg font-bold mt-1 ${entry.from === 'habi' ? 'text-purple-700' : 'text-white'}`}>{formatPrice(entry.amount)}</p>
                   )}
                 </div>
                 {entry.from === 'client' && (
                   <div className="w-7 h-7 bg-purple-100 rounded-full flex items-center justify-center flex-shrink-0 mb-1">
-                    <svg className="w-4 h-4 text-purple-600" fill="currentColor" viewBox="0 0 20 20">
-                      <path d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" />
-                    </svg>
+                    <svg className="w-4 h-4 text-purple-600" fill="currentColor" viewBox="0 0 20 20"><path d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" /></svg>
                   </div>
                 )}
               </div>
@@ -278,33 +271,27 @@ export default function NegotiationSystem({ currentPrice, dealUuid, enabled }: N
           {agreed ? (
             <div className="text-center py-2">
               <div className="flex items-center justify-center gap-2 text-green-600 mb-2">
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                </svg>
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>
                 <span className="font-semibold text-sm">Acuerdo registrado</span>
               </div>
               <button onClick={() => { setDismissed(true); setIsOpen(false); }} className="text-sm text-purple-600 font-medium">Cerrar</button>
             </div>
           ) : waitingForAction ? (
-            /* 3 clear action buttons after Habi responds */
             <div className="space-y-2">
               <p className="text-xs text-gray-500 text-center mb-2">¿Qué te gustaría hacer?</p>
               <button onClick={handleAccept} className="w-full bg-green-600 text-white py-3 rounded-xl font-semibold hover:bg-green-700 transition text-sm flex items-center justify-center gap-2">
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>
                 Aceptar oferta
               </button>
-              {!maxRoundsReached && (
-                <button onClick={handleStartCounter} className="w-full bg-purple-600 text-white py-3 rounded-xl font-semibold hover:bg-purple-700 transition text-sm flex items-center justify-center gap-2">
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4" /></svg>
-                  Contraofertar
-                </button>
-              )}
+              <button onClick={handleStartCounter} className="w-full bg-purple-600 text-white py-3 rounded-xl font-semibold hover:bg-purple-700 transition text-sm flex items-center justify-center gap-2">
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4" /></svg>
+                Contraofertar
+              </button>
               <button onClick={handleReject} className="w-full bg-gray-100 text-gray-600 py-3 rounded-xl font-medium hover:bg-gray-200 transition text-sm">
                 No me interesa
               </button>
             </div>
           ) : showBidControls ? (
-            /* Bid controls: DiDi style */
             <>
               <p className="text-xs text-gray-500 text-center mb-3">Ajusta tu propuesta</p>
               <div className="flex items-center justify-center gap-4 mb-4">
@@ -314,52 +301,34 @@ export default function NegotiationSystem({ currentPrice, dealUuid, enabled }: N
                 >
                   -0.5
                 </button>
-                
-                <div 
-                  className="flex-1 max-w-[200px] bg-gray-100 rounded-2xl px-5 py-4 text-center cursor-pointer hover:bg-gray-200 transition"
-                  onClick={handleStartEdit}
-                >
+                <div className="flex-1 max-w-[200px] bg-gray-100 rounded-2xl px-5 py-4 text-center cursor-pointer hover:bg-gray-200 transition" onClick={handleStartEdit}>
                   {editingPrice ? (
-                    <input
-                      type="text"
-                      value={`$ ${Number(editValue).toLocaleString('es-CO')}`}
+                    <input type="text" value={`$ ${Number(editValue).toLocaleString('es-CO')}`}
                       onChange={(e) => setEditValue(e.target.value.replace(/[^\d]/g, ''))}
-                      onBlur={handleFinishEdit}
-                      onKeyDown={(e) => e.key === 'Enter' && handleFinishEdit()}
-                      autoFocus
-                      className="w-full text-center text-xl font-bold text-gray-900 bg-transparent outline-none"
-                    />
+                      onBlur={handleFinishEdit} onKeyDown={(e) => e.key === 'Enter' && handleFinishEdit()}
+                      autoFocus className="w-full text-center text-xl font-bold text-gray-900 bg-transparent outline-none" />
                   ) : (
                     <>
                       <p className="text-xl font-bold text-gray-900">{formatPrice(clientBid)}</p>
-                      {clientBid > currentPrice && (
-                        <p className="text-xs text-green-600 font-medium mt-0.5">+{pctDiff}%</p>
-                      )}
+                      {clientBid > currentPrice && <p className="text-xs text-green-600 font-medium mt-0.5">+{pctDiff}%</p>}
                       <p className="text-[9px] text-gray-400 mt-1">Toca para editar</p>
                     </>
                   )}
                 </div>
-
                 <button
-                  onClick={() => setClientBid(prev => Math.min(Math.round(currentPrice * 1.15), prev + STEP))}
+                  onClick={() => setClientBid(prev => prev + STEP)}
                   className="w-14 h-14 rounded-full border-2 border-gray-300 flex items-center justify-center text-gray-700 hover:border-purple-400 hover:text-purple-600 hover:bg-purple-50 transition font-bold text-base"
                 >
                   +0.5
                 </button>
               </div>
-
-              <button
-                onClick={handleSubmitBid}
-                disabled={clientBid <= currentPrice}
-                className="w-full bg-purple-600 text-white py-3 rounded-xl font-semibold hover:bg-purple-700 transition disabled:opacity-40 disabled:cursor-not-allowed text-sm"
-              >
+              <button onClick={handleSubmitBid} disabled={clientBid <= currentPrice}
+                className="w-full bg-purple-600 text-white py-3 rounded-xl font-semibold hover:bg-purple-700 transition disabled:opacity-40 disabled:cursor-not-allowed text-sm">
                 Enviar propuesta
               </button>
             </>
           ) : isThinking ? (
-            <div className="text-center py-3">
-              <p className="text-sm text-gray-500">Revisando tu propuesta...</p>
-            </div>
+            <div className="text-center py-3"><p className="text-sm text-gray-500">Revisando tu propuesta...</p></div>
           ) : null}
         </div>
       </div>

@@ -987,6 +987,8 @@ function HomeContent() {
         currentPrice={currentPrice}
         dealUuid={dealUuid}
         enabled={dealUuid === '123'}
+        precioIntermedio={Number(bnplPrices?.precio_intermedio || 0)}
+        precioMaximo={Number(bnplPrices?.precio_maximo_prestamo || 0)}
       />
     </main>
   );
