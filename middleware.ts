@@ -18,11 +18,12 @@ export function middleware(request: NextRequest) {
     return NextResponse.rewrite(url)
   }
 
-  // Rutas de prueba
+  // Rutas de prueba — siempre landing C
   if (TEST_PATHS.includes(request.nextUrl.pathname)) {
     const url = request.nextUrl.clone()
     url.pathname = '/'
     url.searchParams.set('deal_uuid', request.nextUrl.pathname.slice(1))
+    url.searchParams.set('force_group', 'C')
     return NextResponse.rewrite(url)
   }
 }

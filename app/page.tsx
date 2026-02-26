@@ -6,6 +6,7 @@ import Image from 'next/image';
 import posthog from 'posthog-js';
 import { useSearchParams, usePathname } from 'next/navigation';
 import OfferCountdown from './habi/components/OfferCountdown';
+import NegotiationSystem from './habi/components/NegotiationSystem';
 import Navbar from './habi/components/Navbar';
 import SectionRenderer from './habi/components/SectionRenderer';
 import StickyPrice from './habi/components/StickyPrice';
@@ -962,6 +963,13 @@ function HomeContent() {
 
       {/* Asistente de IA flotante */}
       {landingConfig.showChatbot !== false && <AIAssistant />}
+
+      {/* Sistema de negociacion - solo UUID 123 */}
+      <NegotiationSystem
+        currentPrice={currentPrice}
+        dealUuid={dealUuid}
+        enabled={dealUuid === '123'}
+      />
     </main>
   );
 }
