@@ -989,6 +989,7 @@ function HomeContent() {
         enabled={dealUuid === '123'}
         precioIntermedio={Number(bnplPrices?.precio_intermedio || 0)}
         precioMaximo={Number(bnplPrices?.precio_maximo_prestamo || 0)}
+        whatsappAsesor={bnplPrices?.whatsapp_asesor}
       />
     </main>
   );
