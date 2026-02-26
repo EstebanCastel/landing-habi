@@ -135,7 +135,15 @@ export default function NegotiationSystem({ currentPrice, dealUuid, enabled, pre
       return;
     }
 
-    // Ya ofrecimos el intermedio y el cliente quiere mas → ofrecer maximo - 1M
+    // Ya pasamos por el intermedio. Si el cliente pide <= maximo, aceptar lo que pide
+    if (clientBid <= precioMaximo) {
+      const finalOffer = Math.max(clientBid, lastHabiOffer);
+      setLastHabiOffer(finalOffer);
+      addHabiResponse([{ from: 'habi', amount: finalOffer, message: '¡Aceptamos tu propuesta!' }], finalOffer);
+      return;
+    }
+
+    // Cliente pide > maximo → ofrecer maximo - 1M
     if (lastHabiOffer < precioMaximo - 1000000) {
       const offerPreFinal = precioMaximo - 1000000;
       setLastHabiOffer(offerPreFinal);
@@ -147,7 +155,7 @@ export default function NegotiationSystem({ currentPrice, dealUuid, enabled, pre
       return;
     }
 
-    // Ya ofrecimos maximo - 1M, no podemos subir mas por esta via
+    // Ya ofrecimos maximo - 1M
     addHabiResponse([{
       from: 'habi', amount: lastHabiOffer,
       message: `Nuestra oferta de ${formatPrice(lastHabiOffer)} es la mejor que podemos hacer.`,
