@@ -337,6 +337,7 @@ function HomeContent() {
   // Estado de donación
   const [selectedDonation, setSelectedDonation] = useState('');
   const [donationAmount, setDonationAmount] = useState(0);
+  const [negotiatedPrice, setNegotiatedPrice] = useState<number | null>(null);
 
   // Cargar configuración de secciones
   const landingConfig = sectionsConfig as LandingConfig;
@@ -709,7 +710,7 @@ function HomeContent() {
     };
   }, [handleStickyScroll, updateActiveSection]);
 
-  const currentPrice = calculatePrice();
+  const currentPrice = negotiatedPrice ?? calculatePrice();
 
   // Altura del header en móvil (AnnouncementBar + Navbar)
   const mobileHeaderHeight = 90;
@@ -984,12 +985,13 @@ function HomeContent() {
 
       {/* Sistema de negociacion - solo UUID 123 */}
       <NegotiationSystem
-        currentPrice={currentPrice}
+        currentPrice={negotiatedPrice ?? calculatePrice()}
         dealUuid={dealUuid}
         enabled={dealUuid === '123'}
         precioIntermedio={Number(bnplPrices?.precio_intermedio || 0)}
         precioMaximo={Number(bnplPrices?.precio_maximo_prestamo || 0)}
         whatsappAsesor={bnplPrices?.whatsapp_asesor}
+        onPriceNegotiated={setNegotiatedPrice}
       />
     </main>
   );

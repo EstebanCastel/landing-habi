@@ -10,6 +10,7 @@ interface NegotiationSystemProps {
   precioIntermedio: number;
   precioMaximo: number;
   whatsappAsesor?: string;
+  onPriceNegotiated?: (price: number) => void;
 }
 
 interface BidEntry {
@@ -24,7 +25,7 @@ function formatPrice(price: number): string {
 
 const STEP = 500000;
 
-export default function NegotiationSystem({ currentPrice, dealUuid, enabled, precioIntermedio, precioMaximo, whatsappAsesor }: NegotiationSystemProps) {
+export default function NegotiationSystem({ currentPrice, dealUuid, enabled, precioIntermedio, precioMaximo, whatsappAsesor, onPriceNegotiated }: NegotiationSystemProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [dismissed, setDismissed] = useState(false);
   const [clientBid, setClientBid] = useState(currentPrice);
@@ -195,9 +196,11 @@ export default function NegotiationSystem({ currentPrice, dealUuid, enabled, pre
   };
 
   const handleReviewOffer = () => {
+    if (onPriceNegotiated && agreedPrice > 0) {
+      onPriceNegotiated(agreedPrice);
+    }
     setDismissed(true);
     setIsOpen(false);
-    // TODO: actualizar precios en la landing con agreedPrice
   };
 
   const handleStartEdit = () => { setEditingPrice(true); setEditValue(clientBid.toString()); };
@@ -283,11 +286,12 @@ export default function NegotiationSystem({ currentPrice, dealUuid, enabled, pre
         <div className="border-t border-gray-200 p-4 bg-white sm:rounded-b-2xl">
           {agreed ? (
             <div className="space-y-3">
-              <div className="bg-green-50 border border-green-200 rounded-xl p-3 text-center">
-                <p className="text-green-800 font-bold text-lg">{formatPrice(agreedPrice)}</p>
+              <div className="text-center">
+                <p className="text-xs text-gray-500 mb-1">Nuevo precio de compra</p>
+                <p className="text-2xl font-bold text-purple-700">{formatPrice(agreedPrice)}</p>
                 {cededAmount > 0 && (
-                  <p className="text-xs text-green-600 mt-1">
-                    Habi cede un {cededPct}% de su margen para ofrecerte este precio, asumiendo la incertidumbre de venta en el mercado.
+                  <p className="text-[10px] text-gray-400 mt-1">
+                    +{formatPrice(cededAmount)} sobre la oferta inicial
                   </p>
                 )}
               </div>
@@ -298,7 +302,7 @@ export default function NegotiationSystem({ currentPrice, dealUuid, enabled, pre
               </button>
               <button onClick={handleReviewOffer}
                 className="w-full bg-gray-100 text-gray-700 py-2.5 rounded-xl font-medium hover:bg-gray-200 transition text-sm">
-                Revisar mi oferta actualizada
+                Ver mi oferta actualizada
               </button>
             </div>
           ) : waitingForAction ? (
