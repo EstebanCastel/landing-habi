@@ -126,21 +126,30 @@ export default function NegotiationSystem({ currentPrice, dealUuid, enabled, pre
       return;
     }
 
-    // Zona 2: cliente pide > intermedio pero <= maximo → ofrecer intermedio
-    if (clientBid <= precioMaximo) {
-      const offer = Math.max(precioIntermedio, lastHabiOffer);
-      setLastHabiOffer(offer);
-      addHabiResponse([{ from: 'habi', amount: offer, message: `Podemos ofrecerte ${formatPrice(offer)}. ¿Te parece?` }]);
+    // Siempre pasar primero por el intermedio antes de subir mas
+    // Si aun no hemos ofrecido el intermedio, ofrecerlo ahora
+    if (lastHabiOffer < precioIntermedio) {
+      setLastHabiOffer(precioIntermedio);
+      addHabiResponse([{ from: 'habi', amount: precioIntermedio, message: `Podemos ofrecerte ${formatPrice(precioIntermedio)}. ¿Te parece?` }]);
       return;
     }
 
-    // Zona 3: cliente pide > maximo → ofrecer maximo - 1M
-    const offerPreFinal = Math.max(precioMaximo - 1000000, lastHabiOffer);
-    setLastHabiOffer(offerPreFinal);
-    setFinalChance(true);
+    // Ya ofrecimos el intermedio y el cliente quiere mas → ofrecer maximo - 1M
+    if (lastHabiOffer < precioMaximo - 1000000) {
+      const offerPreFinal = precioMaximo - 1000000;
+      setLastHabiOffer(offerPreFinal);
+      setFinalChance(true);
+      addHabiResponse([{
+        from: 'habi', amount: offerPreFinal,
+        message: `Hemos hecho un esfuerzo adicional. Podemos ofrecerte ${formatPrice(offerPreFinal)}.`,
+      }]);
+      return;
+    }
+
+    // Ya ofrecimos maximo - 1M, no podemos subir mas por esta via
     addHabiResponse([{
-      from: 'habi', amount: offerPreFinal,
-      message: `Ese valor está por encima de nuestro rango. Lo máximo que podemos ofrecer es ${formatPrice(offerPreFinal)}.`,
+      from: 'habi', amount: lastHabiOffer,
+      message: `Nuestra oferta de ${formatPrice(lastHabiOffer)} es la mejor que podemos hacer.`,
     }]);
   };
 
