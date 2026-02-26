@@ -441,10 +441,15 @@ export default function HabiDirectSection({
     : baseSinComisionHabi;
   const comisionHabiOriginal = evaluacionMain - baseSinComisionHabi;
 
+  // Delta de negociacion: si currentPrice > precioBase, la comision Habi se reduce
+  const deltaNegociacion = currentPrice - precioBaseEvaluacion;
+  
   // MX: Comision TuHabi = 1.5% evaluacion + 10,000 MXN. Diferencia va a tarifa de servicio.
+  // CO: comision original - delta negociacion (puede ser negativa)
   const comisionHabiUtilidad = isMx
     ? Math.round(evaluacionMain * 0.015 + 10000)
-    : comisionHabiOriginal;
+    : comisionHabiOriginal - deltaNegociacion;
+  const comisionHabiNegativa = !isMx && comisionHabiUtilidad < 0;
   const tarifaServicioExtra = isMx
     ? Math.max(0, comisionHabiOriginal - comisionHabiUtilidad)
     : 0;
@@ -571,13 +576,24 @@ export default function HabiDirectSection({
               <p className="text-xs text-gray-600 mb-1">
                 {isMx
                   ? <>Comisión del <strong>1.5%</strong> + servicios profesionales.</>
-                  : <>Ganancia de Habi del <strong>{comisionHabiPct}%</strong> por la compra de tu inmueble.</>
+                  : comisionHabiNegativa
+                    ? <>{isMx ? 'TuHabi' : 'Habi'} asume el riesgo de mercado para facilitar la compra de tu inmueble, cediendo su margen de ganancia ante la incertidumbre de venta.</>
+                    : <>Ganancia de {isMx ? 'TuHabi' : 'Habi'} del <strong>{comisionHabiPct}%</strong> por la compra de tu inmueble.</>
                 }
               </p>
             </div>
             <div className="text-right ml-4">
-              <p className="font-semibold">{formatPrice(comisionHabiUtilidad)}</p>
-              <p className="text-xs text-gray-500">{comisionHabiPct}%</p>
+              {comisionHabiNegativa ? (
+                <>
+                  <p className="font-semibold text-red-600">{formatPrice(comisionHabiUtilidad)}</p>
+                  <p className="text-xs text-red-400">{comisionHabiPct}%</p>
+                </>
+              ) : (
+                <>
+                  <p className="font-semibold">{formatPrice(comisionHabiUtilidad)}</p>
+                  <p className="text-xs text-gray-500">{comisionHabiPct}%</p>
+                </>
+              )}
             </div>
           </div>
 
