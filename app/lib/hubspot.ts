@@ -17,6 +17,7 @@ export interface HubSpotProperties {
   area_construida?: string | null
   direccion?: string | null
   numero_habitaciones?: string | null
+  v_o_num_hab_confirmadas?: string | null
   numero_de_banos?: string | null
   tipo_inmueble_id?: string | null
   negocio_aplica_para_bnpl?: string | null
