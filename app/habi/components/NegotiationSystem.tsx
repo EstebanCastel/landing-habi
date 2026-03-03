@@ -271,7 +271,9 @@ export default function NegotiationSystem({ currentPrice, dealUuid, enabled, pre
             className="w-14 h-14 bg-purple-600 rounded-full shadow-xl flex items-center justify-center hover:bg-purple-700 active:scale-95 transition-all"
             title="Reabrir negociación"
           >
-            <Image src="/Logo-1200x1200.png" alt="Habi" width={32} height={32} className="rounded-full" />
+            <svg className="w-7 h-7 text-white" fill="currentColor" viewBox="0 0 24 24">
+              <path d="M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2z"/>
+            </svg>
           </button>
           {/* Badge de notificación */}
           <div className="absolute -top-1 -right-1 w-4 h-4 bg-green-500 rounded-full border-2 border-white" />
@@ -286,13 +288,12 @@ export default function NegotiationSystem({ currentPrice, dealUuid, enabled, pre
             {/* Overlay de confirmación de cierre */}
             {showConfirm && (
               <div className="absolute inset-0 z-20 bg-white sm:rounded-2xl rounded-t-2xl flex flex-col items-center justify-center p-6">
-                <div className="w-16 h-16 bg-amber-100 rounded-full flex items-center justify-center mb-4">
-                  <svg className="w-8 h-8 text-amber-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-                  </svg>
-                </div>
                 <h4 className="font-bold text-gray-900 text-xl mb-2 text-center">¿Estás seguro que quieres cerrar?</h4>
-                <p className="text-sm text-gray-500 text-center mb-5">Podrás retomar la negociación cuando quieras.</p>
+                <p className="text-sm text-gray-500 text-center mb-5">
+                  {lastHabiOffer >= precioMaximo
+                    ? 'Esta es nuestra mejor oferta.'
+                    : 'Podrás retomar la negociación cuando quieras.'}
+                </p>
                 <div className="bg-purple-50 rounded-xl p-4 w-full text-center mb-6">
                   <p className="text-xs text-gray-500 mb-1">Tu oferta máxima fue</p>
                   <p className="text-2xl font-bold text-purple-700">{formatPrice(lastHabiOffer)}</p>
@@ -303,12 +304,22 @@ export default function NegotiationSystem({ currentPrice, dealUuid, enabled, pre
                 >
                   Sí, cerrar
                 </button>
-                <button
-                  onClick={() => setShowConfirm(false)}
-                  className="w-full bg-purple-600 text-white py-3 rounded-xl font-semibold hover:bg-purple-700 transition text-sm"
-                >
-                  Continuar negociando
-                </button>
+                {lastHabiOffer >= precioMaximo ? (
+                  <button
+                    onClick={() => { setShowConfirm(false); handleWhatsApp(); }}
+                    className="w-full bg-purple-600 text-white py-3 rounded-xl font-semibold hover:bg-purple-700 transition text-sm flex items-center justify-center gap-2"
+                  >
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" /></svg>
+                    Contactar mi asesor
+                  </button>
+                ) : (
+                  <button
+                    onClick={() => setShowConfirm(false)}
+                    className="w-full bg-purple-600 text-white py-3 rounded-xl font-semibold hover:bg-purple-700 transition text-sm"
+                  >
+                    Continuar negociando
+                  </button>
+                )}
               </div>
             )}
 
