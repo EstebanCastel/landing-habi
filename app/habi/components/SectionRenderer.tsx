@@ -102,10 +102,27 @@ const getComponentProps = (
       };
       
     case 'ComparablesSection': {
-      // Usar askPrice directamente del costBreakdown (precio de venta final calculado por HESH)
-      const evaluacion = props.costBreakdown
-        ? Math.round(props.costBreakdown.askPrice)
-        : props.currentPrice;
+      let evaluacion = props.currentPrice;
+      if (props.bnplPrices && props.costBreakdown) {
+        const isMx = props.bnplPrices.country === 'MX';
+        // Evaluacion siempre usa precio de 1 cuota (contado), no cambia con cuotas
+        // MX: precio_comite_original (precio base algoritmo)
+        // CO: precio_comite (precio contado / 1 cuota)
+        const precioBase = isMx
+          ? Number(props.bnplPrices.precio_comite_original || props.bnplPrices.precio_comite || 0)
+          : Number(props.bnplPrices.precio_comite || 0);
+        const costosSinUtilidad =
+          props.costBreakdown.comision.total +
+          props.costBreakdown.gastosMensuales.total +
+          props.costBreakdown.tarifaServicio.costoFinanciacion +
+          props.costBreakdown.tramites.total +
+          props.costBreakdown.remodelacion.total;
+        const baseSinComisionHabi = precioBase + costosSinUtilidad;
+        const utilidadPct = props.costBreakdown.tarifaServicio.utilidadEsperada;
+        evaluacion = utilidadPct < 1
+          ? Math.round(baseSinComisionHabi / (1 - utilidadPct))
+          : Math.round(baseSinComisionHabi);
+      }
       return {
         onSectionRef: refCallback,
         comparables: props.comparables,

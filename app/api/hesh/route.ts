@@ -6,27 +6,43 @@ const headers = {
   'Cache-Control': 'public, max-age=300, s-maxage=600',
 }
 
-function getBigQueryClient(): BigQuery {
-  const projectId = process.env.GOOGLE_CLOUD_PROJECT || 'sellers-main-prod'
-  const credentialsJson = process.env.GOOGLE_CLOUD_CREDENTIALS
-  if (credentialsJson) {
-    try {
-      const credentials = JSON.parse(credentialsJson)
-      return new BigQuery({ projectId, credentials })
-    } catch (e) {
-      console.error('Error parsing GOOGLE_CLOUD_CREDENTIALS:', e)
-    }
+const PROJECT_ID = process.env.GOOGLE_CLOUD_PROJECT || 'sellers-main-prod'
+
+function createBigQueryClient(envVar: string): BigQuery | null {
+  const credJson = process.env[envVar]
+  if (!credJson) return null
+  try {
+    return new BigQuery({ projectId: PROJECT_ID, credentials: JSON.parse(credJson) })
+  } catch (e) {
+    console.error(`[HESH] Error parsing ${envVar}:`, e)
+    return null
   }
-  const fallbackJson = process.env.GOOGLE_CLOUD_CREDENTIALS_FALLBACK
-  if (fallbackJson) {
-    try {
-      const credentials = JSON.parse(fallbackJson)
-      return new BigQuery({ projectId, credentials })
-    } catch (e) {
-      console.error('Error parsing GOOGLE_CLOUD_CREDENTIALS_FALLBACK:', e)
+}
+
+function isQuotaError(error: unknown): boolean {
+  const msg = error instanceof Error ? error.message : String(error)
+  return (
+    msg.toLowerCase().includes('quota') ||
+    msg.includes('rateLimitExceeded') ||
+    msg.includes('userRateLimitExceeded') ||
+    msg.includes('429') ||
+    (msg.includes('403') && msg.toLowerCase().includes('rate'))
+  )
+}
+
+async function runHeshQuery(query: string, params: object): Promise<unknown[][]> {
+  const primaryClient = createBigQueryClient('GOOGLE_CLOUD_CREDENTIALS') ?? new BigQuery({ projectId: PROJECT_ID })
+  try {
+    return await primaryClient.query({ query, params, location: 'US' })
+  } catch (err) {
+    if (isQuotaError(err)) {
+      console.warn('[HESH] Primary credentials quota exceeded, retrying with fallback...')
+      const fallbackClient = createBigQueryClient('GOOGLE_CLOUD_CREDENTIALS_FALLBACK')
+      if (!fallbackClient) throw err
+      return await fallbackClient.query({ query, params, location: 'US' })
     }
+    throw err
   }
-  return new BigQuery({ projectId })
 }
 
 // Query para Colombia
@@ -368,16 +384,10 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'nid must be a numeric value' }, { status: 400, headers })
     }
     
-    const client = getBigQueryClient()
-    
     // Seleccionar query según país
     const query = country === 'MX' ? HESH_QUERY_MX : HESH_QUERY_CO
-    
-    const [rows] = await client.query({
-      query,
-      params: { nid: parseInt(nid) },
-      location: 'US',
-    })
+
+    const [rows] = await runHeshQuery(query, { nid: parseInt(nid) })
     
     if (!rows || rows.length === 0) {
       return NextResponse.json(
