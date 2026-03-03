@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 
 async function proxy(request: NextRequest, path: string[]) {
-  const upstreamUrl = `https://api.segment.io/${path.join('/')}`;
+  const upstreamUrl = `https://api.segment.io/v1/${path.join('/')}`;
 
   const body = request.method !== 'GET' ? await request.arrayBuffer() : undefined;
 
