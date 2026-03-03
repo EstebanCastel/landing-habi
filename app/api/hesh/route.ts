@@ -30,7 +30,8 @@ function isQuotaError(error: unknown): boolean {
   )
 }
 
-async function runHeshQuery(query: string, params: object): Promise<unknown[][]> {
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+async function runHeshQuery(query: string, params: object): Promise<any> {
   const primaryClient = createBigQueryClient('GOOGLE_CLOUD_CREDENTIALS') ?? new BigQuery({ projectId: PROJECT_ID })
   try {
     return await primaryClient.query({ query, params, location: 'US' })
