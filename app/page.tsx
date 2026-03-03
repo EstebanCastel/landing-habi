@@ -98,8 +98,6 @@ function HomeContent() {
   // Re-engagement campaign: ?camp=revision_oferta
   const campParam = searchParams.get('camp');
   const isReengagement = campParam === 'revision_oferta';
-  // Override manual para testing: ?force_ab=control|test
-  const forceABParam = searchParams.get('force_ab')?.toLowerCase() ?? null;
 
   // Soporte para nid directo (?nid=...) — permite consultar BigQuery sin depender de HubSpot
   // Uso: http://localhost:3000?nid=46452147125 (para desarrollo/testing)
@@ -303,7 +301,7 @@ function HomeContent() {
 
   // ─── Re-engagement A/B test ───
 
-  // 1. Determinar grupo: leer de HubSpot si ya fue asignado, si no usar PostHog flag
+  // 1. Determinar grupo: hash determinista igual que A/B/C (no depende de PostHog async)
   useEffect(() => {
     if (!isReengagement || !dealUuid || !bnplPrices) return;
 
@@ -314,35 +312,23 @@ function HomeContent() {
       return;
     }
 
-    // Si hay override manual para testing
-    if (forceABParam === 'control' || forceABParam === 'test') {
-      setReengagementGroup(forceABParam);
-      console.log(`[AB Reengagement] Group forced: ${forceABParam}`);
-      return;
-    }
-
-    // Evaluar PostHog flag (puede estar disponible inmediatamente o hay que esperar)
-    try {
-      posthog.identify(dealUuid);
-      const flag = posthog.getFeatureFlag('ab-test-landing');
-      if (flag === 'control' || flag === 'test') {
-        setReengagementGroup(flag);
-        console.log(`[AB Reengagement] Group from PostHog (immediate): ${flag}`);
-      } else {
-        posthog.onFeatureFlags(() => {
-          const f = posthog.getFeatureFlag('ab-test-landing');
-          const group = f === 'test' ? 'test' : 'control';
-          setReengagementGroup(group);
-          console.log(`[AB Reengagement] Group from PostHog (loaded): ${group}`);
-        });
+    // Hash determinista: misma seed que A/B/C pero con sufijo diferente
+    const hashUuid = (uuid: string): number => {
+      let hash = 0;
+      for (let i = 0; i < uuid.length; i++) {
+        const char = uuid.charCodeAt(i);
+        hash = ((hash << 5) - hash) + char;
+        hash |= 0;
       }
-    } catch (e) {
-      console.warn('[AB Reengagement] PostHog error, defaulting to control:', e);
-      setReengagementGroup('control');
-    }
-  }, [isReengagement, dealUuid, bnplPrices, forceABParam]);
+      return Math.abs(hash);
+    };
 
-  // 2. Escribir grupo en HubSpot (solo si no estaba ya escrito)
+    const group: 'control' | 'test' = hashUuid(dealUuid + '_re') % 2 === 0 ? 'control' : 'test';
+    console.log(`[AB Reengagement] Group assigned: ${group}`);
+    setReengagementGroup(group);
+  }, [isReengagement, dealUuid, bnplPrices]);
+
+  // 2. Escribir grupo en HubSpot y trackear en PostHog (solo una vez)
   useEffect(() => {
     if (!reengagementGroup || reengagementGroupWritten || !dealUuid || !isReengagement) return;
     if (bnplPrices?.ab_test_landing) { setReengagementGroupWritten(true); return; }
@@ -357,15 +343,26 @@ function HomeContent() {
         if (res.ok) {
           setReengagementGroupWritten(true);
           console.log(`[AB Reengagement] Group ${reengagementGroup} written to HubSpot`);
-          posthog.capture('ab_reengagement_assigned', {
-            group: reengagementGroup,
-            country: bnplPrices?.country ?? 'CO',
-            deal_uuid: dealUuid,
-            camp: campParam,
-          });
         }
       } catch (err) {
         console.error('[AB Reengagement] Failed to write group to HubSpot:', err);
+      }
+
+      // Track en PostHog independiente del resultado de HubSpot
+      try {
+        posthog.identify(dealUuid);
+        posthog.capture('$feature_flag_called', {
+          '$feature_flag': 'ab-test-landing',
+          '$feature_flag_response': reengagementGroup,
+        });
+        posthog.capture('ab_reengagement_assigned', {
+          group: reengagementGroup,
+          country: bnplPrices?.country ?? 'CO',
+          deal_uuid: dealUuid,
+          camp: campParam,
+        });
+      } catch (e) {
+        console.warn('[AB Reengagement] PostHog tracking failed:', e);
       }
     };
     writeGroup();
