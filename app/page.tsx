@@ -131,12 +131,16 @@ function HomeContent() {
   // Filtrar comparables: P50 inferior para Colombia
   const isCOComparables = bnplPrices?.country === 'CO' || !bnplPrices?.country;
   const filteredComparables = useMemo(() => {
+    const sorted = [...comparables].sort((a, b) => a.lastAskPrice - b.lastAskPrice);
+    // UUID específico: solo los 3 comparables más baratos
+    if (dealUuid === '2020133b-f7c0-4372-93c5-42a974882b3a') {
+      return sorted.slice(0, 3);
+    }
     if (isCOComparables && comparables.length > 0) {
-      const sorted = [...comparables].sort((a, b) => a.lastAskPrice - b.lastAskPrice);
       return sorted.slice(0, Math.ceil(sorted.length / 2));
     }
     return comparables;
-  }, [comparables, isCOComparables]);
+  }, [comparables, isCOComparables, dealUuid]);
   const mapComparables = filteredComparables;
   
   // Configuración de la oferta
