@@ -269,7 +269,7 @@ export default function NegotiationSystem({ currentPrice, dealUuid, enabled, pre
     <>
       {/* Burbuja para reabrir negociación */}
       {hasBeenTriggered && !isOpen && (
-        <div className="fixed bottom-24 right-6 sm:bottom-6 sm:right-auto sm:left-6 z-[99]">
+        <div className="fixed bottom-16 right-6 sm:bottom-6 sm:right-auto sm:left-6 z-[99]">
           <button
             onClick={handleReopenFromBubble}
             className="w-14 h-14 bg-purple-600 rounded-full shadow-xl flex items-center justify-center hover:bg-purple-700 active:scale-95 transition-all"
