@@ -95,6 +95,12 @@ function HomeContent() {
   const forceGroupParam = searchParams.get('force_group')?.toUpperCase() ?? null;
   const forceGroup = forceGroupParam || (dealUuid && TEST_FORCE_C.includes(dealUuid) ? 'C' : null);
 
+  // Re-engagement campaign: ?camp=revision_oferta
+  const campParam = searchParams.get('camp');
+  const isReengagement = campParam === 'revision_oferta';
+  // Override manual para testing: ?force_ab=control|test
+  const forceABParam = searchParams.get('force_ab')?.toLowerCase() ?? null;
+
   // Soporte para nid directo (?nid=...) — permite consultar BigQuery sin depender de HubSpot
   // Uso: http://localhost:3000?nid=46452147125 (para desarrollo/testing)
   const directNid = searchParams.get('nid')?.trim() ?? null;
@@ -103,10 +109,15 @@ function HomeContent() {
   const [hubspotLoading, setHubspotLoading] = useState(!!dealUuid);
   const [hubspotFailed, setHubspotFailed] = useState(false);
   const [bnplPrices, setBnplPrices] = useState<HubSpotProperties | null>(null);
-  
+
   // A/B/C Test state (PostHog Feature Flag)
   const [abcGroup, setAbcGroup] = useState<string | null>(null);
   const [abcGroupWritten, setAbcGroupWritten] = useState(false);
+
+  // Re-engagement A/B test state
+  const [reengagementGroup, setReengagementGroup] = useState<'control' | 'test' | null>(null);
+  const [reengagementGroupWritten, setReengagementGroupWritten] = useState(false);
+  const [costBreakdownRead, setCostBreakdownRead] = useState(false);
   const [showStickyPrice, setShowStickyPrice] = useState(true);
   // Sección activa: 'property' (imagen), 'comparables' (mapa), 'configurator' (imagen config), 'payment' (imagen cuotas), 'donation' (videos), 'other' (fondo neutro)
   const [activeSection, setActiveSection] = useState<'property' | 'comparables' | 'configurator' | 'payment' | 'donation' | 'other'>('property');
@@ -219,7 +230,13 @@ function HomeContent() {
   // This avoids client-side PostHog flag loading issues
   useEffect(() => {
     if (!dealUuid || !bnplPrices) return;
-    
+
+    // Re-engagement: siempre Landing C, no correr hash A/B/C
+    if (isReengagement) {
+      setAbcGroup('C');
+      return;
+    }
+
     // Solo aplicar A/B/C test para Colombia
     const isCO = bnplPrices.country === 'CO' || !bnplPrices.country;
     if (!isCO) {
@@ -242,7 +259,7 @@ function HomeContent() {
     const group = (forceGroup && ['A', 'B', 'C'].includes(forceGroup))
       ? forceGroup as 'A' | 'B' | 'C'
       : groups[hashUuid(dealUuid) % 3];
-    
+
     console.log(`[ABC Test] Deal ${dealUuid} -> group: ${group}${forceGroup ? ' (forced)' : ''}`);
     setAbcGroup(group);
 
@@ -257,11 +274,11 @@ function HomeContent() {
     } catch (e) {
       console.warn('[ABC Test] PostHog tracking failed:', e);
     }
-  }, [dealUuid, bnplPrices]);
+  }, [dealUuid, bnplPrices, isReengagement]);
 
-  // Write ABC group to HubSpot (once)
+  // Write ABC group to HubSpot (once) — no aplica para flujo re-engagement
   useEffect(() => {
-    if (!abcGroup || abcGroupWritten || !dealUuid) return;
+    if (!abcGroup || abcGroupWritten || !dealUuid || isReengagement) return;
     
     const writeGroup = async () => {
       try {
@@ -283,6 +300,103 @@ function HomeContent() {
     };
     writeGroup();
   }, [abcGroup, abcGroupWritten, dealUuid]);
+
+  // ─── Re-engagement A/B test ───
+
+  // 1. Determinar grupo: leer de HubSpot si ya fue asignado, si no usar PostHog flag
+  useEffect(() => {
+    if (!isReengagement || !dealUuid || !bnplPrices) return;
+
+    // Si ya está asignado en HubSpot (endpoint lo seteó antes del envío), usar ese valor
+    if (bnplPrices.ab_test_landing === 'control' || bnplPrices.ab_test_landing === 'test') {
+      setReengagementGroup(bnplPrices.ab_test_landing);
+      console.log(`[AB Reengagement] Group from HubSpot: ${bnplPrices.ab_test_landing}`);
+      return;
+    }
+
+    // Si hay override manual para testing
+    if (forceABParam === 'control' || forceABParam === 'test') {
+      setReengagementGroup(forceABParam);
+      console.log(`[AB Reengagement] Group forced: ${forceABParam}`);
+      return;
+    }
+
+    // Evaluar PostHog flag (puede estar disponible inmediatamente o hay que esperar)
+    try {
+      posthog.identify(dealUuid);
+      const flag = posthog.getFeatureFlag('ab-test-landing');
+      if (flag === 'control' || flag === 'test') {
+        setReengagementGroup(flag);
+        console.log(`[AB Reengagement] Group from PostHog (immediate): ${flag}`);
+      } else {
+        posthog.onFeatureFlags(() => {
+          const f = posthog.getFeatureFlag('ab-test-landing');
+          const group = f === 'test' ? 'test' : 'control';
+          setReengagementGroup(group);
+          console.log(`[AB Reengagement] Group from PostHog (loaded): ${group}`);
+        });
+      }
+    } catch (e) {
+      console.warn('[AB Reengagement] PostHog error, defaulting to control:', e);
+      setReengagementGroup('control');
+    }
+  }, [isReengagement, dealUuid, bnplPrices, forceABParam]);
+
+  // 2. Escribir grupo en HubSpot (solo si no estaba ya escrito)
+  useEffect(() => {
+    if (!reengagementGroup || reengagementGroupWritten || !dealUuid || !isReengagement) return;
+    if (bnplPrices?.ab_test_landing) { setReengagementGroupWritten(true); return; }
+
+    const writeGroup = async () => {
+      try {
+        const res = await fetch('/api/hubspot/ab-test-landing', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ deal_uuid: dealUuid, group: reengagementGroup }),
+        });
+        if (res.ok) {
+          setReengagementGroupWritten(true);
+          console.log(`[AB Reengagement] Group ${reengagementGroup} written to HubSpot`);
+          posthog.capture('ab_reengagement_assigned', {
+            group: reengagementGroup,
+            country: bnplPrices?.country ?? 'CO',
+            deal_uuid: dealUuid,
+            camp: campParam,
+          });
+        }
+      } catch (err) {
+        console.error('[AB Reengagement] Failed to write group to HubSpot:', err);
+      }
+    };
+    writeGroup();
+  }, [reengagementGroup, reengagementGroupWritten, dealUuid, isReengagement, bnplPrices?.ab_test_landing]);
+
+  // 3. IntersectionObserver: 60s leyendo el desgloce de costos → trigger negociador
+  useEffect(() => {
+    if (!isReengagement || reengagementGroup !== 'test') return;
+
+    const section = document.querySelector('#configurator-section');
+    if (!section) return;
+
+    let visibleTimer: ReturnType<typeof setTimeout> | null = null;
+
+    const observer = new IntersectionObserver(([entry]) => {
+      if (entry.isIntersecting) {
+        visibleTimer = setTimeout(() => {
+          setCostBreakdownRead(true);
+          observer.disconnect();
+        }, 60000); // 1 minuto visible
+      } else {
+        if (visibleTimer) { clearTimeout(visibleTimer); visibleTimer = null; }
+      }
+    }, { threshold: 0.3 });
+
+    observer.observe(section);
+    return () => {
+      observer.disconnect();
+      if (visibleTimer) clearTimeout(visibleTimer);
+    };
+  }, [isReengagement, reengagementGroup]);
 
   // Ajustar formaPago a 'contado' si BNPL no está disponible
   useEffect(() => {
@@ -983,15 +1097,16 @@ function HomeContent() {
       {/* Asistente de IA flotante */}
       {landingConfig.showChatbot !== false && <AIAssistant />}
 
-      {/* Sistema de negociacion - solo UUID 123 */}
+      {/* Sistema de negociacion - re-engagement grupo test (CO) o UUID 123 (testing) */}
       <NegotiationSystem
         currentPrice={negotiatedPrice ?? calculatePrice()}
         dealUuid={dealUuid}
-        enabled={dealUuid === '123'}
+        enabled={isReengagement ? reengagementGroup === 'test' : dealUuid === '123'}
         precioIntermedio={Number(bnplPrices?.precio_intermedio || 0)}
         precioMaximo={Number(bnplPrices?.precio_maximo_prestamo || 0)}
         whatsappAsesor={bnplPrices?.whatsapp_asesor}
         onPriceNegotiated={setNegotiatedPrice}
+        costBreakdownRead={costBreakdownRead}
       />
     </main>
   );

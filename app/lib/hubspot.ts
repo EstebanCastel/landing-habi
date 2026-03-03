@@ -30,6 +30,7 @@ export interface HubSpotProperties {
   quiere_ofertar_alianza?: string | null
   precio_maximo_prestamo?: string | null
   precio_intermedio?: string | null
+  ab_test_landing?: string | null
   error?: boolean
   message?: string
 }

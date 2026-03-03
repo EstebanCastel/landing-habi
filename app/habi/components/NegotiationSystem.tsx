@@ -11,6 +11,7 @@ interface NegotiationSystemProps {
   precioMaximo: number;
   whatsappAsesor?: string;
   onPriceNegotiated?: (price: number) => void;
+  costBreakdownRead?: boolean;
 }
 
 interface BidEntry {
@@ -25,7 +26,7 @@ function formatPrice(price: number): string {
 
 const STEP = 500000;
 
-export default function NegotiationSystem({ currentPrice, dealUuid, enabled, precioIntermedio, precioMaximo, whatsappAsesor, onPriceNegotiated }: NegotiationSystemProps) {
+export default function NegotiationSystem({ currentPrice, dealUuid, enabled, precioIntermedio, precioMaximo, whatsappAsesor, onPriceNegotiated, costBreakdownRead }: NegotiationSystemProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [dismissed, setDismissed] = useState(false);
   const [clientBid, setClientBid] = useState(currentPrice);
@@ -42,40 +43,33 @@ export default function NegotiationSystem({ currentPrice, dealUuid, enabled, pre
 
   // Triggers
   const timeRef = useRef(0);
-  const scrollChangesRef = useRef(0);
-  const lastScrollDirRef = useRef<'up' | 'down' | null>(null);
   const ctaClickedRef = useRef(false);
   const triggeredRef = useRef(false);
 
-  const triggerCheck = useCallback(() => {
+  const openNegotiator = useCallback(() => {
     if (triggeredRef.current || dismissed || isOpen) return;
-    if ((timeRef.current >= 15 && !ctaClickedRef.current) || (scrollChangesRef.current >= 4 && !ctaClickedRef.current)) {
-      triggeredRef.current = true;
-      setIsOpen(true);
-      setHistory([{ from: 'habi', amount: currentPrice, message: 'Nuestra oferta inicial por tu inmueble.' }]);
-      setLastHabiOffer(currentPrice);
-      setWaitingForAction(true);
-    }
+    triggeredRef.current = true;
+    setIsOpen(true);
+    setHistory([{ from: 'habi', amount: currentPrice, message: 'Nuestra oferta inicial por tu inmueble.' }]);
+    setLastHabiOffer(currentPrice);
+    setWaitingForAction(true);
   }, [dismissed, isOpen, currentPrice]);
 
+  // Trigger 1: 2 minutos en la página
   useEffect(() => {
     if (!enabled || dismissed) return;
-    const interval = setInterval(() => { timeRef.current += 1; triggerCheck(); }, 1000);
+    const interval = setInterval(() => {
+      timeRef.current += 1;
+      if (timeRef.current >= 120 && !ctaClickedRef.current) openNegotiator();
+    }, 1000);
     return () => clearInterval(interval);
-  }, [enabled, dismissed, triggerCheck]);
+  }, [enabled, dismissed, openNegotiator]);
 
+  // Trigger 2: 1 minuto leyendo el desgloce de costos
   useEffect(() => {
-    if (!enabled || dismissed) return;
-    let lastY = window.scrollY;
-    const handle = () => {
-      const dir = window.scrollY > lastY ? 'down' : 'up';
-      lastY = window.scrollY;
-      if (lastScrollDirRef.current && dir !== lastScrollDirRef.current) { scrollChangesRef.current += 1; triggerCheck(); }
-      lastScrollDirRef.current = dir;
-    };
-    window.addEventListener('scroll', handle, { passive: true });
-    return () => window.removeEventListener('scroll', handle);
-  }, [enabled, dismissed, triggerCheck]);
+    if (!enabled || !costBreakdownRead) return;
+    openNegotiator();
+  }, [enabled, costBreakdownRead, openNegotiator]);
 
   useEffect(() => {
     if (!enabled || dismissed) return;
