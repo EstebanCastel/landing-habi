@@ -301,18 +301,18 @@ function HomeContent() {
 
   // ─── Re-engagement A/B test ───
 
-  // 1. Determinar grupo: hash determinista igual que A/B/C (no depende de PostHog async)
+  // 1. Determinar grupo: hash determinista — solo necesita dealUuid, no bnplPrices
   useEffect(() => {
-    if (!isReengagement || !dealUuid || !bnplPrices) return;
+    if (!isReengagement || !dealUuid) return;
 
-    // Si ya está asignado en HubSpot (endpoint lo seteó antes del envío), usar ese valor
-    if (bnplPrices.ab_test_landing === 'control' || bnplPrices.ab_test_landing === 'test') {
+    // Si HubSpot ya tiene el grupo asignado (seteado por el endpoint antes del envío), usarlo
+    if (bnplPrices?.ab_test_landing === 'control' || bnplPrices?.ab_test_landing === 'test') {
       setReengagementGroup(bnplPrices.ab_test_landing);
       console.log(`[AB Reengagement] Group from HubSpot: ${bnplPrices.ab_test_landing}`);
       return;
     }
 
-    // Hash determinista: misma seed que A/B/C pero con sufijo diferente
+    // Hash determinista: misma lógica que A/B/C pero con sufijo diferente
     const hashUuid = (uuid: string): number => {
       let hash = 0;
       for (let i = 0; i < uuid.length; i++) {
@@ -326,7 +326,7 @@ function HomeContent() {
     const group: 'control' | 'test' = hashUuid(dealUuid + '_re') % 2 === 0 ? 'control' : 'test';
     console.log(`[AB Reengagement] Group assigned: ${group}`);
     setReengagementGroup(group);
-  }, [isReengagement, dealUuid, bnplPrices]);
+  }, [isReengagement, dealUuid, bnplPrices?.ab_test_landing]);
 
   // 2. Escribir grupo en HubSpot y trackear en PostHog (solo una vez)
   useEffect(() => {
@@ -1094,11 +1094,11 @@ function HomeContent() {
       {/* Asistente de IA flotante */}
       {landingConfig.showChatbot !== false && <AIAssistant />}
 
-      {/* Sistema de negociacion - re-engagement grupo test (CO) o UUID 123 (testing) */}
+      {/* Sistema de negociacion - solo flujo re-engagement grupo test */}
       <NegotiationSystem
         currentPrice={negotiatedPrice ?? calculatePrice()}
         dealUuid={dealUuid}
-        enabled={isReengagement ? reengagementGroup === 'test' : dealUuid === '123'}
+        enabled={isReengagement && reengagementGroup === 'test'}
         precioIntermedio={Number(bnplPrices?.precio_intermedio || 0)}
         precioMaximo={Number(bnplPrices?.precio_maximo_prestamo || 0)}
         whatsappAsesor={bnplPrices?.whatsapp_asesor}
