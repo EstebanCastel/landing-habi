@@ -7,39 +7,31 @@ const headers = {
   'Cache-Control': 'public, max-age=300, s-maxage=600', // Cache 5 min
 }
 
-/**
- * Inicializa el cliente de BigQuery.
- * Soporta:
- * 1. GOOGLE_APPLICATION_CREDENTIALS (ruta a archivo JSON de service account)
- * 2. GOOGLE_CLOUD_CREDENTIALS (JSON de service account como string en env var)
- * 3. Application Default Credentials (gcloud auth application-default login)
- */
-function getBigQueryClient(): BigQuery {
-  const projectId = process.env.GOOGLE_CLOUD_PROJECT || 'sellers-main-prod'
-  
-  // Intentar credenciales principales
-  const credentialsJson = process.env.GOOGLE_CLOUD_CREDENTIALS
-  if (credentialsJson) {
-    try {
-      const credentials = JSON.parse(credentialsJson)
-      return new BigQuery({ projectId, credentials })
-    } catch (e) {
-      console.error('Error parsing GOOGLE_CLOUD_CREDENTIALS:', e)
-    }
+const PROJECT_ID = process.env.GOOGLE_CLOUD_PROJECT || 'sellers-main-prod'
+
+/** Crea un cliente BigQuery a partir de una variable de entorno con JSON de credenciales. */
+function createBigQueryClient(envVar: string): BigQuery | null {
+  const credJson = process.env[envVar]
+  if (!credJson) return null
+  try {
+    return new BigQuery({ projectId: PROJECT_ID, credentials: JSON.parse(credJson) })
+  } catch (e) {
+    console.error(`[Comparables] Error parsing ${envVar}:`, e)
+    return null
   }
-  
-  // Fallback: credenciales alternativas
-  const fallbackJson = process.env.GOOGLE_CLOUD_CREDENTIALS_FALLBACK
-  if (fallbackJson) {
-    try {
-      const credentials = JSON.parse(fallbackJson)
-      return new BigQuery({ projectId, credentials })
-    } catch (e) {
-      console.error('Error parsing GOOGLE_CLOUD_CREDENTIALS_FALLBACK:', e)
-    }
-  }
-  
-  return new BigQuery({ projectId })
+}
+
+/** Detecta si el error es de cuota agotada en BigQuery / Google APIs. */
+function isQuotaError(error: unknown): boolean {
+  const msg = error instanceof Error ? error.message : String(error)
+  return (
+    msg.toLowerCase().includes('quota') ||
+    msg.includes('rateLimitExceeded') ||
+    msg.includes('userRateLimitExceeded') ||
+    msg.includes('429') ||
+    // authorized_user con token expirado / sin cuota devuelve 403
+    (msg.includes('403') && msg.toLowerCase().includes('rate'))
+  )
 }
 
 /**
@@ -309,25 +301,33 @@ export async function GET(request: NextRequest) {
       )
     }
     
-    const client = getBigQueryClient()
-    
     // Seleccionar query según país
     const query = country === 'MX' ? COMPARABLES_QUERY_MX : COMPARABLES_QUERY_CO
-    
+
     console.log(`[Comparables] Fetching for nid=${nid}, country=${country}`)
     console.log(`[Comparables] Query project: ${country === 'MX' ? 'papyrus-data-mx' : 'papyrus-data'}`)
-    
+
     // MX: nid como string (CAST en query), CO: nid como int
     const params = country === 'MX' ? { nid: nid } : { nid: parseInt(nid) }
-    
+
     console.log(`[Comparables] Executing BigQuery with params:`, JSON.stringify(params))
     const startTime = Date.now()
-    
-    const queryResult = await client.query({
-      query,
-      params,
-      location: 'US',
-    })
+
+    // Intentar con credenciales primarias; si falla por cuota, usar fallback
+    const primaryClient = createBigQueryClient('GOOGLE_CLOUD_CREDENTIALS') ?? new BigQuery({ projectId: PROJECT_ID })
+    let queryResult
+    try {
+      queryResult = await primaryClient.query({ query, params, location: 'US' })
+    } catch (primaryErr) {
+      if (isQuotaError(primaryErr)) {
+        console.warn('[Comparables] Primary credentials quota exceeded, retrying with fallback...')
+        const fallbackClient = createBigQueryClient('GOOGLE_CLOUD_CREDENTIALS_FALLBACK')
+        if (!fallbackClient) throw primaryErr
+        queryResult = await fallbackClient.query({ query, params, location: 'US' })
+      } else {
+        throw primaryErr
+      }
+    }
     const rows = queryResult[0]
     
     console.log(`[Comparables] BigQuery completed in ${Date.now() - startTime}ms, rows: ${rows?.length ?? 0}`)
