@@ -831,7 +831,7 @@ function HomeContent() {
   const currentPrice = negotiatedPrice ?? calculatePrice();
 
   // Altura del header en móvil (AnnouncementBar + Navbar)
-  const mobileHeaderHeight = 90;
+  // mobileHeaderHeight eliminado: panel imagen está dentro del mismo sticky que el header
 
   // Loading screen (datos del mapa o HubSpot)
   if (isLoading || hubspotLoading) {
@@ -903,40 +903,27 @@ function HomeContent() {
       <Suspense fallback={null}>
         <PageViewTracker />
       </Suspense>
-      {/* Header sticky - Countdown + Navbar */}
+      {/* Header sticky - Countdown + Navbar + panel imagen móvil (todo en un bloque, sin gap) */}
       <div className="sticky top-0 z-50">
         <OfferCountdown dealUuid={dealUuid} />
         <Navbar activeCountry={bnplPrices?.country ?? 'CO'} />
-      </div>
 
-      {/* === LAYOUT MÓVIL === */}
-      <div className="md:hidden flex flex-col flex-1">
-        {/* Panel superior FIJO en móvil - debajo del header */}
-        <div 
-          className="sticky bg-white z-40 border-b border-gray-100"
-          style={{ 
-            top: `${mobileHeaderHeight}px`,
-            height: '220px'
-          }}
-        >
-          {/* Casa SVG - para todas las secciones excepto comparables */}
-          <div 
-            className={`absolute inset-0 transition-opacity duration-500 bg-white flex items-center justify-center ${activeSection !== 'comparables' ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}
-          >
+        {/* Panel imagen/mapa — solo móvil, dentro del sticky para evitar gap */}
+        <div className="md:hidden relative bg-white border-b border-gray-100" style={{ height: '170px' }}>
+          {/* Casa SVG */}
+          <div className={`absolute inset-0 transition-opacity duration-500 bg-white flex items-center justify-center ${activeSection !== 'comparables' ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}>
             <Image
               src="/casa.svg"
               alt="Tu inmueble"
               width={500}
               height={500}
-              className="w-40 h-40 sm:w-48 sm:h-48 object-contain scale-150"
+              className="w-32 h-32 object-contain scale-150"
               priority
             />
           </div>
 
-          {/* Mapa - sección 'comparables' */}
-          <div 
-            className={`absolute inset-0 transition-opacity duration-500 ${activeSection === 'comparables' ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}
-          >
+          {/* Mapa */}
+          <div className={`absolute inset-0 transition-opacity duration-500 ${activeSection === 'comparables' ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}>
             {inmueble && mapComparables.length > 0 && (
               <ComparablesMap
                 inmueble={{
@@ -951,10 +938,11 @@ function HomeContent() {
               />
             )}
           </div>
-
-          
         </div>
+      </div>
 
+      {/* === LAYOUT MÓVIL === */}
+      <div className="md:hidden flex flex-col flex-1">
         {/* Configurador scrolleable en móvil */}
         <div className="flex-1 bg-white pb-24">
           <SectionRenderer
