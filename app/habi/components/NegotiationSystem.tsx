@@ -26,7 +26,7 @@ function formatPrice(price: number): string {
 
 const STEP = 500000;
 
-export default function NegotiationSystem({ currentPrice, dealUuid, enabled, precioIntermedio, precioMaximo, whatsappAsesor, onPriceNegotiated, costBreakdownRead }: NegotiationSystemProps) {
+export default function NegotiationSystem({ currentPrice, dealUuid: _dealUuid, enabled, precioIntermedio, precioMaximo, whatsappAsesor, onPriceNegotiated, costBreakdownRead }: NegotiationSystemProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [dismissed, setDismissed] = useState(false);
   const [clientBid, setClientBid] = useState(currentPrice);
@@ -68,7 +68,8 @@ export default function NegotiationSystem({ currentPrice, dealUuid, enabled, pre
   // Trigger 2: 1 minuto leyendo el desgloce de costos
   useEffect(() => {
     if (!enabled || !costBreakdownRead) return;
-    openNegotiator();
+    const t = setTimeout(openNegotiator, 0);
+    return () => clearTimeout(t);
   }, [enabled, costBreakdownRead, openNegotiator]);
 
   useEffect(() => {
