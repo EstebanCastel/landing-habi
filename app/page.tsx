@@ -278,9 +278,10 @@ function HomeContent() {
     }
   }, [dealUuid, bnplPrices, isReengagement]);
 
-  // Write ABC group to HubSpot (once) — no aplica para flujo re-engagement
+  // Write ABC group to HubSpot (once) — no aplica para re-engagement ni para MX
   useEffect(() => {
     if (!abcGroup || abcGroupWritten || !dealUuid || isReengagement) return;
+    if (bnplPrices?.country === 'MX') return; // MX siempre C, no se escribe el ABC test
     
     const writeGroup = async () => {
       try {
@@ -301,13 +302,16 @@ function HomeContent() {
       }
     };
     writeGroup();
-  }, [abcGroup, abcGroupWritten, dealUuid]);
+  }, [abcGroup, abcGroupWritten, dealUuid, isReengagement, bnplPrices?.country]);
 
   // ─── Re-engagement A/B test ───
 
-  // 1. Determinar grupo: hash determinista — solo necesita dealUuid, no bnplPrices
+  // 1. Determinar grupo: hash determinista
+  // CO: solo si es re-engagement (?camp=revision_oferta)
+  // MX: siempre (sin necesitar query param)
   useEffect(() => {
-    if (!isReengagement || !dealUuid) return;
+    const isMX = bnplPrices?.country === 'MX';
+    if (!dealUuid || (!isReengagement && !isMX)) return;
 
     // Si HubSpot ya tiene el grupo asignado (seteado por el endpoint antes del envío), usarlo
     if (bnplPrices?.ab_test_landing === 'A' || bnplPrices?.ab_test_landing === 'B') {
@@ -330,11 +334,13 @@ function HomeContent() {
     const group: 'A' | 'B' = hashUuid(dealUuid + '_re') % 2 === 0 ? 'A' : 'B';
     console.log(`[AB Reengagement] Group assigned: ${group}`);
     setReengagementGroup(group);
-  }, [isReengagement, dealUuid, bnplPrices?.ab_test_landing]);
+  }, [isReengagement, dealUuid, bnplPrices?.ab_test_landing, bnplPrices?.country]);
 
   // 2. Escribir grupo en HubSpot y trackear en PostHog (solo una vez)
   useEffect(() => {
-    if (!reengagementGroup || reengagementGroupWritten || !dealUuid || !isReengagement) return;
+    const isMX = bnplPrices?.country === 'MX';
+    if (!reengagementGroup || reengagementGroupWritten || !dealUuid) return;
+    if (!isReengagement && !isMX) return;
     if (bnplPrices?.ab_test_landing) { setReengagementGroupWritten(true); return; }
 
     const writeGroup = async () => {
@@ -373,7 +379,7 @@ function HomeContent() {
       }
     };
     writeGroup();
-  }, [reengagementGroup, reengagementGroupWritten, dealUuid, isReengagement, bnplPrices?.ab_test_landing]);
+  }, [reengagementGroup, reengagementGroupWritten, dealUuid, isReengagement, bnplPrices?.ab_test_landing, bnplPrices?.country]);
 
   // 3. IntersectionObserver: 60s leyendo el desgloce de costos → trigger negociador
   useEffect(() => {
