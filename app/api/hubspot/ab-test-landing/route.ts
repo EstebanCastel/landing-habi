@@ -5,7 +5,7 @@ export const dynamic = 'force-dynamic'
 /**
  * POST /api/hubspot/ab-test-landing
  * Escribe el grupo del A/B test de re-engagement en la propiedad `ab_test_landing` del deal.
- * Body: { deal_uuid: string, group: 'control' | 'test' }
+ * Body: { deal_uuid: string, group: 'A' | 'B' }
  *
  * Idempotente: si el deal ya tiene un valor en ab_test_landing, lo devuelve sin sobreescribir.
  */
@@ -18,8 +18,8 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Missing deal_uuid or group' }, { status: 400 })
     }
 
-    if (!['control', 'test'].includes(group)) {
-      return NextResponse.json({ error: 'Invalid group. Must be control or test' }, { status: 400 })
+    if (!['A', 'B'].includes(group)) {
+      return NextResponse.json({ error: 'Invalid group. Must be A or B' }, { status: 400 })
     }
 
     const apiKey = process.env.HUBSPOT_ACCESS_TOKEN

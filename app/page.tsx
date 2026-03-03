@@ -113,7 +113,7 @@ function HomeContent() {
   const [abcGroupWritten, setAbcGroupWritten] = useState(false);
 
   // Re-engagement A/B test state
-  const [reengagementGroup, setReengagementGroup] = useState<'control' | 'test' | null>(null);
+  const [reengagementGroup, setReengagementGroup] = useState<'A' | 'B' | null>(null);
   const [reengagementGroupWritten, setReengagementGroupWritten] = useState(false);
   const [costBreakdownRead, setCostBreakdownRead] = useState(false);
   const [showStickyPrice, setShowStickyPrice] = useState(true);
@@ -306,7 +306,7 @@ function HomeContent() {
     if (!isReengagement || !dealUuid) return;
 
     // Si HubSpot ya tiene el grupo asignado (seteado por el endpoint antes del envío), usarlo
-    if (bnplPrices?.ab_test_landing === 'control' || bnplPrices?.ab_test_landing === 'test') {
+    if (bnplPrices?.ab_test_landing === 'A' || bnplPrices?.ab_test_landing === 'B') {
       setReengagementGroup(bnplPrices.ab_test_landing);
       console.log(`[AB Reengagement] Group from HubSpot: ${bnplPrices.ab_test_landing}`);
       return;
@@ -323,7 +323,7 @@ function HomeContent() {
       return Math.abs(hash);
     };
 
-    const group: 'control' | 'test' = hashUuid(dealUuid + '_re') % 2 === 0 ? 'control' : 'test';
+    const group: 'A' | 'B' = hashUuid(dealUuid + '_re') % 2 === 0 ? 'A' : 'B';
     console.log(`[AB Reengagement] Group assigned: ${group}`);
     setReengagementGroup(group);
   }, [isReengagement, dealUuid, bnplPrices?.ab_test_landing]);
@@ -343,6 +343,9 @@ function HomeContent() {
         if (res.ok) {
           setReengagementGroupWritten(true);
           console.log(`[AB Reengagement] Group ${reengagementGroup} written to HubSpot`);
+        } else {
+          const errBody = await res.json().catch(() => ({}));
+          console.error(`[AB Reengagement] Write failed (${res.status}):`, errBody, '| deal_uuid:', dealUuid, '| group:', reengagementGroup);
         }
       } catch (err) {
         console.error('[AB Reengagement] Failed to write group to HubSpot:', err);
@@ -370,7 +373,7 @@ function HomeContent() {
 
   // 3. IntersectionObserver: 60s leyendo el desgloce de costos → trigger negociador
   useEffect(() => {
-    if (!isReengagement || reengagementGroup !== 'test') return;
+    if (!isReengagement || reengagementGroup !== 'B') return;
 
     const section = document.querySelector('#configurator-section');
     if (!section) return;
@@ -1098,7 +1101,7 @@ function HomeContent() {
       <NegotiationSystem
         currentPrice={negotiatedPrice ?? calculatePrice()}
         dealUuid={dealUuid}
-        enabled={isReengagement && reengagementGroup === 'test'}
+        enabled={isReengagement && reengagementGroup === 'B'}
         precioIntermedio={Number(bnplPrices?.precio_intermedio || 0)}
         precioMaximo={Number(bnplPrices?.precio_maximo_prestamo || 0)}
         whatsappAsesor={bnplPrices?.whatsapp_asesor}
