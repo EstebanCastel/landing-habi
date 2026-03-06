@@ -50,7 +50,7 @@ export default function NegotiationSystem({ currentPrice, dealUuid, enabled, pre
 
   // Cargar sesión guardada en Supabase al montar
   useEffect(() => {
-    if (!enabled || !dealUuid || dealUuid === '123') return;
+    if (!enabled || !dealUuid) return;
     const loadSession = async () => {
       try {
         const res = await fetch(`/api/negotiation?deal_uuid=${dealUuid}`);
@@ -81,7 +81,7 @@ export default function NegotiationSystem({ currentPrice, dealUuid, enabled, pre
 
   // Guardar en Supabase cuando cambia el historial
   useEffect(() => {
-    if (!enabled || !dealUuid || dealUuid === '123' || history.length === 0 || savingRef.current) return;
+    if (!enabled || !dealUuid || history.length === 0 || savingRef.current) return;
     const persistentHistory = history.filter(e => e.from !== 'system');
     if (persistentHistory.length === 0) return;
     savingRef.current = true;
