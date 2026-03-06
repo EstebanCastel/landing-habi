@@ -333,18 +333,18 @@ function HomeContent() {
     const isMX = bnplPrices?.country === 'MX';
     if (!dealUuid || (!isReengagement && !isMX)) return;
 
-    // Si HubSpot ya tiene el grupo asignado (seteado por el endpoint antes del envío), usarlo
-    if (bnplPrices?.ab_test_landing === 'A' || bnplPrices?.ab_test_landing === 'B') {
-      setReengagementGroup(bnplPrices.ab_test_landing);
-      console.log(`[AB Reengagement] Group from HubSpot: ${bnplPrices.ab_test_landing}`);
-      return;
-    }
-
-    // Force group B for test UUID
+    // Force group B for test UUID (priority over HubSpot)
     const FORCE_REENGAGEMENT_B = ['123'];
     if (FORCE_REENGAGEMENT_B.includes(dealUuid)) {
       console.log(`[AB Reengagement] Group forced B for ${dealUuid}`);
       setReengagementGroup('B');
+      return;
+    }
+
+    // Si HubSpot ya tiene el grupo asignado (seteado por el endpoint antes del envío), usarlo
+    if (bnplPrices?.ab_test_landing === 'A' || bnplPrices?.ab_test_landing === 'B') {
+      setReengagementGroup(bnplPrices.ab_test_landing);
+      console.log(`[AB Reengagement] Group from HubSpot: ${bnplPrices.ab_test_landing}`);
       return;
     }
 
