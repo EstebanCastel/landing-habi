@@ -14,7 +14,7 @@
       "component": "ComparablesSection",
       "panelType": "map",
       "refName": "comparables",
-      "enabled": true
+      "enabled": false
     },
     {
       "id": "sale-modality",

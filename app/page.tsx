@@ -99,6 +99,9 @@ function HomeContent() {
   const campParam = searchParams.get('camp');
   const isReengagement = campParam === 'revision_oferta';
 
+  // WhatsApp channel tracking: log URL params to Google Sheets
+  const channelParam = searchParams.get('channel');
+
   // Soporte para nid directo (?nid=...) — permite consultar BigQuery sin depender de HubSpot
   // Uso: http://localhost:3000?nid=46452147125 (para desarrollo/testing)
   const directNid = searchParams.get('nid')?.trim() ?? null;
@@ -226,6 +229,23 @@ function HomeContent() {
 
     return () => clearTimeout(timeout);
   }, [dealUuid]);
+
+  // WhatsApp channel: log all URL params to Google Sheets when channel=whatsapp
+  useEffect(() => {
+    if (channelParam !== 'whatsapp') return;
+
+    const fullUrl = window.location.href;
+    const params: Record<string, string> = {};
+    searchParams.forEach((value, key) => {
+      params[key] = value;
+    });
+
+    fetch('/api/sheets/log', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ fullUrl, params }),
+    }).catch((err) => console.error('[Sheets log] Error:', err));
+  }, [channelParam, searchParams]);
 
   // A/B/C Test: Deterministic hash assignment (consistent per UUID)
   // Uses the same principle as PostHog feature flags: hash(uuid) -> group
