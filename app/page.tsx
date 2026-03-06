@@ -340,6 +340,14 @@ function HomeContent() {
       return;
     }
 
+    // Force group B for test UUID
+    const FORCE_REENGAGEMENT_B = ['123'];
+    if (FORCE_REENGAGEMENT_B.includes(dealUuid)) {
+      console.log(`[AB Reengagement] Group forced B for ${dealUuid}`);
+      setReengagementGroup('B');
+      return;
+    }
+
     // Hash determinista: misma lógica que A/B/C pero con sufijo diferente
     const hashUuid = (uuid: string): number => {
       let hash = 0;
