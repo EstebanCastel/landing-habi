@@ -247,9 +247,7 @@ function HomeContent() {
     }).catch((err) => console.error('[Sheets log] Error:', err));
   }, [channelParam, searchParams]);
 
-  // A/B/C Test: Deterministic hash assignment (consistent per UUID)
-  // Uses the same principle as PostHog feature flags: hash(uuid) -> group
-  // This avoids client-side PostHog flag loading issues
+  // A/B/C Test: respect existing HubSpot group, default to C for new deals
   useEffect(() => {
     if (!dealUuid || !bnplPrices) return;
 
@@ -259,30 +257,29 @@ function HomeContent() {
       return;
     }
 
-    // Solo aplicar A/B/C test para Colombia
+    // MX siempre landing C
     const isCO = bnplPrices.country === 'CO' || !bnplPrices.country;
     if (!isCO) {
-      setAbcGroup('C'); // MX siempre landing modular
+      setAbcGroup('C');
       return;
     }
 
-    // Deterministic hash: same UUID always returns the same group
-    const hashUuid = (uuid: string): number => {
-      let hash = 0;
-      for (let i = 0; i < uuid.length; i++) {
-        const char = uuid.charCodeAt(i);
-        hash = ((hash << 5) - hash) + char;
-        hash |= 0; // Convert to 32-bit integer
-      }
-      return Math.abs(hash);
-    };
+    // Si HubSpot ya tiene grupo asignado, respetar ese valor
+    const existingGroup = bnplPrices.ab_test_landing?.toUpperCase();
+    if (existingGroup && ['A', 'B', 'C'].includes(existingGroup)) {
+      const group = (forceGroup && ['A', 'B', 'C'].includes(forceGroup))
+        ? forceGroup as 'A' | 'B' | 'C'
+        : existingGroup as 'A' | 'B' | 'C';
+      console.log(`[ABC Test] Deal ${dealUuid} -> group: ${group} (from HubSpot${forceGroup ? ', forced' : ''})`);
+      setAbcGroup(group);
+      return;
+    }
 
-    const groups: ('A' | 'B' | 'C')[] = ['A', 'B', 'C'];
+    // Nuevos deals sin grupo: siempre C (experimento concluido)
     const group = (forceGroup && ['A', 'B', 'C'].includes(forceGroup))
       ? forceGroup as 'A' | 'B' | 'C'
-      : groups[hashUuid(dealUuid) % 3];
-
-    console.log(`[ABC Test] Deal ${dealUuid} -> group: ${group}${forceGroup ? ' (forced)' : ''}`);
+      : 'C' as const;
+    console.log(`[ABC Test] Deal ${dealUuid} -> group: ${group} (default C${forceGroup ? ', forced' : ''})`);
     setAbcGroup(group);
 
     // Track assignment in PostHog for analytics
@@ -296,7 +293,7 @@ function HomeContent() {
     } catch (e) {
       console.warn('[ABC Test] PostHog tracking failed:', e);
     }
-  }, [dealUuid, bnplPrices, isReengagement]);
+  }, [dealUuid, bnplPrices, isReengagement, forceGroup]);
 
   // Write ABC group to HubSpot (once) — no aplica para re-engagement ni para MX
   useEffect(() => {
