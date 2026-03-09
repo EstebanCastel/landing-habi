@@ -161,13 +161,11 @@ function HomeContent() {
     
     if (!tipoId) return DEFAULT_PROPERTY_DATA.tipoInmueble;
     const tipos: Record<string, string> = {
-      '1': 'Apartamento',
+      '1': 'Departamento en condominio',
       '2': 'Casa',
-      '3': 'Oficina',
-      '4': 'Local',
-      '5': 'Lote',
-      '6': 'Finca',
-      '7': 'Bodega',
+      '3': 'Casa en condominio',
+      '4': 'Departamento en edificio',
+      '5': 'Casa duplex',
     };
     return tipos[tipoId] || tipoId;
   };
