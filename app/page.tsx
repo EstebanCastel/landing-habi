@@ -264,20 +264,30 @@ function HomeContent() {
 
     // Si HubSpot ya tiene grupo asignado, respetar ese valor
     const existingGroup = bnplPrices.ab_test_landing?.toUpperCase();
-    if (existingGroup && ['A', 'B', 'C'].includes(existingGroup)) {
-      const group = (forceGroup && ['A', 'B', 'C'].includes(forceGroup))
-        ? forceGroup as 'A' | 'B' | 'C'
-        : existingGroup as 'A' | 'B' | 'C';
+    if (existingGroup && ['A', 'B', 'C', 'D'].includes(existingGroup)) {
+      const group = (forceGroup && ['A', 'B', 'C', 'D'].includes(forceGroup))
+        ? forceGroup
+        : existingGroup;
       console.log(`[ABC Test] Deal ${dealUuid} -> group: ${group} (from HubSpot${forceGroup ? ', forced' : ''})`);
       setAbcGroup(group);
       return;
     }
 
-    // Nuevos deals sin grupo: siempre C (experimento concluido)
-    const group = (forceGroup && ['A', 'B', 'C'].includes(forceGroup))
-      ? forceGroup as 'A' | 'B' | 'C'
-      : 'C' as const;
-    console.log(`[ABC Test] Deal ${dealUuid} -> group: ${group} (default C${forceGroup ? ', forced' : ''})`);
+    // Nuevos deals CO sin grupo: C (85%) o D (15%) via hash determinista
+    const hashUuid = (uuid: string): number => {
+      let hash = 0;
+      for (let i = 0; i < uuid.length; i++) {
+        const char = uuid.charCodeAt(i);
+        hash = ((hash << 5) - hash) + char;
+        hash |= 0;
+      }
+      return Math.abs(hash);
+    };
+
+    const group = (forceGroup && ['A', 'B', 'C', 'D'].includes(forceGroup))
+      ? forceGroup
+      : (hashUuid(dealUuid) % 100) < 15 ? 'D' : 'C';
+    console.log(`[ABC Test] Deal ${dealUuid} -> group: ${group}${forceGroup ? ' (forced)' : ''}`);
     setAbcGroup(group);
 
     // Track assignment in PostHog for analytics
@@ -470,8 +480,8 @@ function HomeContent() {
     const cleanupScroll = initScrollTracking(country);
     const cleanupPageTime = initPageTimeTracking(country);
 
-    // Enable PostHog session recording for group C (modular landing)
-    if (abcGroup === 'C') {
+    // Enable PostHog session recording for group C/D (modular landing)
+    if (abcGroup === 'C' || abcGroup === 'D') {
       try { posthog.startSessionRecording(); } catch { /* ignore if not available */ }
     }
 
