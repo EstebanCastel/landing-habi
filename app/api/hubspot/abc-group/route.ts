@@ -5,7 +5,7 @@ export const dynamic = 'force-dynamic'
 /**
  * POST /api/hubspot/abc-group
  * Writes the A/B/C test group assignment to HubSpot deal property `abc_test_landing_co`
- * Body: { deal_uuid: string, group: 'A' | 'B' | 'C' }
+ * Body: { deal_uuid: string, group: 'A' | 'B' | 'C' | 'D' }
  * 
  * SECURITY: Frontend only sends deal_uuid (public). 
  * The numeric HubSpot dealId is resolved server-side and never exposed to the client.
@@ -22,9 +22,9 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    if (!['A', 'B', 'C'].includes(group)) {
+    if (!['A', 'B', 'C', 'D'].includes(group)) {
       return NextResponse.json(
-        { error: 'Invalid group. Must be A, B, or C' },
+        { error: 'Invalid group. Must be A, B, C, or D' },
         { status: 400 }
       )
     }

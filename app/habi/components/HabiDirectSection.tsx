@@ -485,172 +485,6 @@ export default function HabiDirectSection({
 
   return (
     <>
-      {/* SECCIÓN INICIAL: Así se construye tu oferta */}
-      <div id="configurator-section" className="p-6 bg-white border-b border-gray-200">
-        <h3 className="text-xl font-bold mb-2">Así se construye tu oferta</h3>
-        <p className="text-sm text-gray-600 mb-6">
-          Conoce los gastos asociados a tu inmueble. En {isMx ? 'TuHabi' : 'Habi'} queremos ser transparentes contigo en cada paso del proceso.
-        </p>
-
-        <div className="space-y-4">
-          {/* Comisiones de venta (Brokers) */}
-          <div className="flex justify-between items-start pb-3 border-b border-gray-100">
-            <div className="flex-1">
-              <p className="font-medium text-sm mb-2">Comisiones de venta</p>
-              <p className="text-xs text-gray-600 mb-1">
-                Comisiones de intermediación para vender tu inmueble ({comisionPct}%).
-              </p>
-              <p className="text-xs text-gray-500">
-                En una venta tradicional pagarías entre 3% y 5%.
-              </p>
-            </div>
-            <div className="text-right ml-4">
-              <p className="font-semibold">{formatPrice(comisionTotal)}</p>
-              <p className="text-xs text-gray-500">{comisionPct}%</p>
-            </div>
-          </div>
-
-          {/* Gastos mensuales del inmueble */}
-          <div className="flex justify-between items-start pb-3 border-b border-gray-100">
-            <div className="flex-1">
-              <p className="font-medium text-sm mb-2">Gastos mensuales del inmueble</p>
-              {isMx ? (
-                <>
-                  <p className="text-xs text-gray-600 mb-1">
-                    Monto total correspondiente al periodo estimado de venta ({periodoMeses} meses).
-                  </p>
-                  <p className="text-xs text-gray-500 mb-2">
-                    Este cobro se realiza por adelantado y refleja los gastos que asumirías durante ese tiempo.
-                  </p>
-                </>
-              ) : (
-                <>
-                  <p className="text-xs text-gray-600 mb-1">
-                    Administración y servicios del inmueble durante el proceso de venta.
-                  </p>
-                  <p className="text-xs text-gray-500 mb-2">
-                    Estos gastos existen incluso si vendes por tu cuenta.<br />
-                    {isMx ? 'TuHabi' : 'Habi'} se encarga desde {isAlianza ? 'la entrega del inmueble' : 'el momento de la escritura'}.
-                  </p>
-                  <button
-                    onClick={() => { setShowExpenseCalculator(true); analytics.calculatorOpened(bnplPrices?.country); }}
-                    className="text-xs text-purple-600 font-medium hover:text-purple-700 transition"
-                  >
-                    Ver más →
-                  </button>
-                </>
-              )}
-            </div>
-            <div className="text-right ml-4">
-              <p className="font-semibold">{formatPrice(propertyMensual)}</p>
-              <p className="text-xs text-gray-500">{propertyPct}%</p>
-            </div>
-          </div>
-
-          {/* Tarifa de servicio (costos operativos) */}
-          <div className="flex justify-between items-start pb-3 border-b border-gray-100">
-            <div className="flex-1">
-              <p className="font-medium text-sm mb-2">Tarifa de servicio</p>
-              {isAlianza ? (
-                <p className="text-xs text-gray-600 mb-1">
-                  Incluye trámites bancarios, levantamiento de gravámenes y todos los costos operativos asociados al proceso de compra y venta.
-                </p>
-              ) : (
-                <p className="text-xs text-gray-600 mb-1">
-                  Costos operativos asociados al proceso de compra y venta del inmueble.
-                </p>
-              )}
-            </div>
-            <div className="text-right ml-4">
-              <p className="font-semibold">{formatPrice(isAlianza ? costoFinanciacionDisplay + costosTramites : costoFinanciacionDisplay)}</p>
-              <p className="text-xs text-gray-500">{isAlianza
-                ? (evaluacionMain > 0 ? (((costoFinanciacionDisplay + costosTramites) / evaluacionMain) * 100).toFixed(1) : financiacionPct)
-                : financiacionPct}%</p>
-            </div>
-          </div>
-
-          {/* Comisión Habi (utilidad) */}
-          <div className="flex justify-between items-start pb-3 border-b border-gray-100">
-            <div className="flex-1">
-              <p className="font-medium text-sm mb-2">Comisión {isMx ? 'TuHabi' : 'Habi'}</p>
-              <p className="text-xs text-gray-600 mb-1">
-                {isMx
-                  ? <>Comisión del <strong>1.5%</strong> + servicios profesionales.</>
-                  : comisionHabiNegativa
-                    ? <>{isMx ? 'TuHabi' : 'Habi'} asume el riesgo de mercado para facilitar la compra de tu inmueble, cediendo su margen de ganancia ante la incertidumbre de venta.</>
-                    : <>Ganancia de {isMx ? 'TuHabi' : 'Habi'} del <strong>{comisionHabiPct}%</strong> por la compra de tu inmueble.</>
-                }
-              </p>
-            </div>
-            <div className="text-right ml-4">
-              {comisionHabiNegativa ? (
-                <>
-                  <p className="font-semibold text-red-600">{formatPrice(comisionHabiUtilidad)}</p>
-                  <p className="text-xs text-red-400">{comisionHabiPct}%</p>
-                </>
-              ) : (
-                <>
-                  <p className="font-semibold">{formatPrice(comisionHabiUtilidad)}</p>
-                  <p className="text-xs text-gray-500">{comisionHabiPct}%</p>
-                </>
-              )}
-            </div>
-          </div>
-
-          {/* Trámites y notarías / Costos operativos */}
-          <div className="flex justify-between items-start pb-3 border-b border-gray-100">
-            <div className="flex-1">
-              <p className="font-medium text-sm mb-2">
-                {isMx ? 'Costos operativos' : 'Trámites y notarías'}
-              </p>
-              {isAlianza ? (
-                <>
-                  <p className="text-xs text-green-600 font-medium mb-1">
-                    Te estás ahorrando {formatPrice(costosTramites)} en costos de trámites y notarías.
-                  </p>
-                  <p className="text-xs text-gray-500">
-                    Gastos legales y notariales que Habi asume por ti gracias a nuestras alianzas.
-                  </p>
-                </>
-              ) : (
-                <p className="text-xs text-gray-600 mb-1">
-                  {isMx
-                    ? 'Gastos operativos asociados al proceso de compra del inmueble.'
-                    : 'Gastos legales y notariales asociados a la compraventa del inmueble.'}
-                </p>
-              )}
-            </div>
-            <div className="text-right ml-4">
-              {isAlianza ? (
-                <>
-                  <p className="font-semibold text-green-600">$0</p>
-                  <p className="text-xs text-green-500 line-through">{formatPrice(costosTramites)}</p>
-                </>
-              ) : (
-                <>
-                  <p className="font-semibold">{formatPrice(costosTramites)}</p>
-                  <p className="text-xs text-gray-500">{tramitesPct}%</p>
-                </>
-              )}
-            </div>
-          </div>
-
-          {/* Estado del inmueble (Remodelaciones) - Informativo */}
-          <div className="flex justify-between items-start">
-            <div className="flex-1">
-              <p className="font-medium text-sm mb-2">Estado del inmueble</p>
-              <p className="text-xs text-gray-600 mb-1">
-                Costo estimado de remodelaciones y mejoras recomendadas para la venta.
-              </p>
-            </div>
-            <div className="text-right ml-4">
-              <p className="font-semibold">{formatPrice(costosRemodelacion)}</p>
-              <p className="text-xs text-gray-500">{remodelacionPct}%</p>
-            </div>
-          </div>
-        </div>
-      </div>
-
       {/* ================================================================
          SECCIONES DE TOGGLE: Trámites y Remodelación
          Controlado desde sections.json → showCostToggles: true/false
@@ -800,6 +634,196 @@ export default function HabiDirectSection({
           </div>
         </>
       )}
+
+      {/* SECCIÓN: Así se construye tu oferta */}
+      <div id="configurator-section" className="p-6 bg-white border-b border-gray-200">
+        <h3 className="text-xl font-bold mb-2">Así se construye tu oferta</h3>
+        <p className="text-sm text-gray-600 mb-6">
+          Conoce los gastos asociados a tu inmueble. En {isMx ? 'TuHabi' : 'Habi'} queremos ser transparentes contigo en cada paso del proceso.
+        </p>
+
+        <div className="space-y-4">
+          {/* Comisiones de venta (Brokers) */}
+          <div className="flex justify-between items-start pb-3 border-b border-gray-100">
+            <div className="flex-1">
+              <p className="font-medium text-sm mb-2">Comisiones de venta</p>
+              <p className="text-xs text-gray-600 mb-1">
+                Comisiones de intermediación para vender tu inmueble ({comisionPct}%).
+              </p>
+              <p className="text-xs text-gray-500">
+                En una venta tradicional pagarías entre 3% y 5%.
+              </p>
+            </div>
+            <div className="text-right ml-4">
+              <p className="font-semibold">{formatPrice(comisionTotal)}</p>
+              <p className="text-xs text-gray-500">{comisionPct}%</p>
+            </div>
+          </div>
+
+          {/* Gastos mensuales del inmueble */}
+          <div className="flex justify-between items-start pb-3 border-b border-gray-100">
+            <div className="flex-1">
+              <p className="font-medium text-sm mb-2">Gastos mensuales del inmueble</p>
+              {isMx ? (
+                <>
+                  <p className="text-xs text-gray-600 mb-1">
+                    Monto total correspondiente al periodo estimado de venta ({periodoMeses} meses).
+                  </p>
+                  <p className="text-xs text-gray-500 mb-2">
+                    Este cobro se realiza por adelantado y refleja los gastos que asumirías durante ese tiempo.
+                  </p>
+                </>
+              ) : (
+                <>
+                  <p className="text-xs text-gray-600 mb-1">
+                    Administración y servicios del inmueble durante el proceso de venta.
+                  </p>
+                  <p className="text-xs text-gray-500 mb-2">
+                    Estos gastos existen incluso si vendes por tu cuenta.<br />
+                    {isMx ? 'TuHabi' : 'Habi'} se encarga desde {isAlianza ? 'la entrega del inmueble' : 'el momento de la escritura'}.
+                  </p>
+                  <button
+                    onClick={() => { setShowExpenseCalculator(true); analytics.calculatorOpened(bnplPrices?.country); }}
+                    className="text-xs text-purple-600 font-medium hover:text-purple-700 transition"
+                  >
+                    Ver más →
+                  </button>
+                </>
+              )}
+            </div>
+            <div className="text-right ml-4">
+              <p className="font-semibold">{formatPrice(propertyMensual)}</p>
+              <p className="text-xs text-gray-500">{propertyPct}%</p>
+            </div>
+          </div>
+
+          {/* Tarifa de servicio (costos operativos) */}
+          <div className="flex justify-between items-start pb-3 border-b border-gray-100">
+            <div className="flex-1">
+              <p className="font-medium text-sm mb-2">Tarifa de servicio</p>
+              {isAlianza ? (
+                <p className="text-xs text-gray-600 mb-1">
+                  Incluye trámites bancarios, levantamiento de gravámenes y todos los costos operativos asociados al proceso de compra y venta.
+                </p>
+              ) : (
+                <p className="text-xs text-gray-600 mb-1">
+                  Costos operativos asociados al proceso de compra y venta del inmueble.
+                </p>
+              )}
+            </div>
+            <div className="text-right ml-4">
+              <p className="font-semibold">{formatPrice(isAlianza ? costoFinanciacionDisplay + costosTramites : costoFinanciacionDisplay)}</p>
+              <p className="text-xs text-gray-500">{isAlianza
+                ? (evaluacionMain > 0 ? (((costoFinanciacionDisplay + costosTramites) / evaluacionMain) * 100).toFixed(1) : financiacionPct)
+                : financiacionPct}%</p>
+            </div>
+          </div>
+
+          {/* Comisión Habi (utilidad) */}
+          <div className="flex justify-between items-start pb-3 border-b border-gray-100">
+            <div className="flex-1">
+              <p className="font-medium text-sm mb-2">Comisión {isMx ? 'TuHabi' : 'Habi'}</p>
+              <p className="text-xs text-gray-600 mb-1">
+                {isMx
+                  ? <>Comisión del <strong>1.5%</strong> + servicios profesionales.</>
+                  : comisionHabiNegativa
+                    ? <>{isMx ? 'TuHabi' : 'Habi'} asume el riesgo de mercado para facilitar la compra de tu inmueble, cediendo su margen de ganancia ante la incertidumbre de venta.</>
+                    : <>Ganancia de {isMx ? 'TuHabi' : 'Habi'} del <strong>{comisionHabiPct}%</strong> por la compra de tu inmueble.</>
+                }
+              </p>
+            </div>
+            <div className="text-right ml-4">
+              {comisionHabiNegativa ? (
+                <>
+                  <p className="font-semibold text-red-600">{formatPrice(comisionHabiUtilidad)}</p>
+                  <p className="text-xs text-red-400">{comisionHabiPct}%</p>
+                </>
+              ) : (
+                <>
+                  <p className="font-semibold">{formatPrice(comisionHabiUtilidad)}</p>
+                  <p className="text-xs text-gray-500">{comisionHabiPct}%</p>
+                </>
+              )}
+            </div>
+          </div>
+
+          {/* Trámites y notarías / Costos operativos */}
+          <div className="flex justify-between items-start pb-3 border-b border-gray-100">
+            <div className="flex-1">
+              <p className={`font-medium text-sm mb-2 ${configuration.tramites === 'cliente' ? 'text-gray-400' : ''}`}>
+                {isMx ? 'Costos operativos' : 'Trámites y notarías'}
+              </p>
+              {isAlianza ? (
+                <>
+                  <p className="text-xs text-green-600 font-medium mb-1">
+                    Te estás ahorrando {formatPrice(costosTramites)} en costos de trámites y notarías.
+                  </p>
+                  <p className="text-xs text-gray-500">
+                    Gastos legales y notariales que Habi asume por ti gracias a nuestras alianzas.
+                  </p>
+                </>
+              ) : configuration.tramites === 'cliente' ? (
+                <p className="text-xs text-green-600 font-medium mb-1">
+                  Tú te harás cargo de estos gastos. Este costo ya no se descuenta de tu oferta.
+                </p>
+              ) : (
+                <p className="text-xs text-gray-600 mb-1">
+                  {isMx
+                    ? 'Gastos operativos asociados al proceso de compra del inmueble.'
+                    : 'Gastos legales y notariales asociados a la compraventa del inmueble.'}
+                </p>
+              )}
+            </div>
+            <div className="text-right ml-4">
+              {isAlianza ? (
+                <>
+                  <p className="font-semibold text-green-600">$0</p>
+                  <p className="text-xs text-green-500 line-through">{formatPrice(costosTramites)}</p>
+                </>
+              ) : configuration.tramites === 'cliente' ? (
+                <>
+                  <p className="font-semibold text-gray-400 line-through">{formatPrice(costosTramites)}</p>
+                  <p className="text-xs text-green-600">Tú los pagas</p>
+                </>
+              ) : (
+                <>
+                  <p className="font-semibold">{formatPrice(costosTramites)}</p>
+                  <p className="text-xs text-gray-500">{tramitesPct}%</p>
+                </>
+              )}
+            </div>
+          </div>
+
+          {/* Estado del inmueble (Remodelaciones) */}
+          <div className="flex justify-between items-start">
+            <div className="flex-1">
+              <p className={`font-medium text-sm mb-2 ${configuration.remodelacion === 'cliente' ? 'text-gray-400' : ''}`}>Estado del inmueble</p>
+              {configuration.remodelacion === 'cliente' ? (
+                <p className="text-xs text-green-600 font-medium mb-1">
+                  Tú te harás cargo de las mejoras. Este costo ya no se descuenta de tu oferta.
+                </p>
+              ) : (
+                <p className="text-xs text-gray-600 mb-1">
+                  Costo estimado de remodelaciones y mejoras recomendadas para la venta.
+                </p>
+              )}
+            </div>
+            <div className="text-right ml-4">
+              {configuration.remodelacion === 'cliente' ? (
+                <>
+                  <p className="font-semibold text-gray-400 line-through">{formatPrice(costosRemodelacion)}</p>
+                  <p className="text-xs text-green-600">Tú las haces</p>
+                </>
+              ) : (
+                <>
+                  <p className="font-semibold">{formatPrice(costosRemodelacion)}</p>
+                  <p className="text-xs text-gray-500">{remodelacionPct}%</p>
+                </>
+              )}
+            </div>
+          </div>
+        </div>
+      </div>
 
       {/* Asesor Personal */}
       <PersonalAdvisor whatsappAsesor={whatsappAsesor} country={bnplPrices?.country} />
