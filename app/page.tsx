@@ -135,8 +135,8 @@ function HomeContent() {
   const isCOComparables = bnplPrices?.country === 'CO' || !bnplPrices?.country;
   const filteredComparables = useMemo(() => {
     const sorted = [...comparables].sort((a, b) => a.lastAskPrice - b.lastAskPrice);
-    // UUID específico: solo los 3 comparables más baratos
-    if (dealUuid === '2020133b-f7c0-4372-93c5-42a974882b3a') {
+    // UUID específicos: solo los 3 comparables más baratos
+    if (dealUuid === '2020133b-f7c0-4372-93c5-42a974882b3a' || dealUuid === 'b7fb6c2b-9c30-4da7-8f70-a7230b2deae7') {
       return sorted.slice(0, 3);
     }
     if (isCOComparables && comparables.length > 0) {
