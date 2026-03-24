@@ -31,6 +31,7 @@ export interface HubSpotProperties {
   precio_maximo_prestamo?: string | null
   precio_intermedio?: string | null
   ab_test_landing?: 'A' | 'B' | null
+  abc_test_landing_co?: string | null
   error?: boolean
   message?: string
 }

@@ -245,7 +245,8 @@ function HomeContent() {
     }).catch((err) => console.error('[Sheets log] Error:', err));
   }, [channelParam, searchParams]);
 
-  // A/B/C Test: respect existing HubSpot group, default to C for new deals
+  // A/B/C Test: respect existing HubSpot group, assign via hash for new deals
+  // CO: 85% C, 15% D | MX: 33% A, 33% B, 34% C
   useEffect(() => {
     if (!dealUuid || !bnplPrices) return;
 
@@ -255,25 +256,31 @@ function HomeContent() {
       return;
     }
 
-    // MX siempre landing C
-    const isCO = bnplPrices.country === 'CO' || !bnplPrices.country;
-    if (!isCO) {
-      setAbcGroup('C');
-      return;
-    }
+    const country = bnplPrices.country || 'CO';
 
-    // Si HubSpot ya tiene grupo asignado, respetar ese valor
-    const existingGroup = bnplPrices.ab_test_landing?.toUpperCase();
+    // Si HubSpot ya tiene grupo asignado en abc_test_landing_co, respetar ese valor
+    const existingGroup = bnplPrices.abc_test_landing_co?.toUpperCase();
     if (existingGroup && ['A', 'B', 'C', 'D'].includes(existingGroup)) {
       const group = (forceGroup && ['A', 'B', 'C', 'D'].includes(forceGroup))
         ? forceGroup
         : existingGroup;
-      console.log(`[ABC Test] Deal ${dealUuid} -> group: ${group} (from HubSpot${forceGroup ? ', forced' : ''})`);
+      console.log(`[ABC Test] Deal ${dealUuid} -> group: ${group} (from HubSpot abc_test_landing_co${forceGroup ? ', forced' : ''}) [${country}]`);
       setAbcGroup(group);
       return;
     }
 
-    // Nuevos deals CO sin grupo: C (85%) o D (15%) via hash determinista
+    // Fallback: revisar ab_test_landing (legacy, solo CO)
+    const legacyGroup = bnplPrices.ab_test_landing?.toUpperCase();
+    if (country === 'CO' && legacyGroup && ['A', 'B', 'C', 'D'].includes(legacyGroup)) {
+      const group = (forceGroup && ['A', 'B', 'C', 'D'].includes(forceGroup))
+        ? forceGroup
+        : legacyGroup;
+      console.log(`[ABC Test] Deal ${dealUuid} -> group: ${group} (from HubSpot ab_test_landing legacy${forceGroup ? ', forced' : ''}) [CO]`);
+      setAbcGroup(group);
+      return;
+    }
+
+    // Hash determinista para nuevos deals sin grupo
     const hashUuid = (uuid: string): number => {
       let hash = 0;
       for (let i = 0; i < uuid.length; i++) {
@@ -284,10 +291,19 @@ function HomeContent() {
       return Math.abs(hash);
     };
 
-    const group = (forceGroup && ['A', 'B', 'C', 'D'].includes(forceGroup))
-      ? forceGroup
-      : (hashUuid(dealUuid) % 100) < 15 ? 'D' : 'C';
-    console.log(`[ABC Test] Deal ${dealUuid} -> group: ${group}${forceGroup ? ' (forced)' : ''}`);
+    let group: string;
+    if (forceGroup && ['A', 'B', 'C', 'D'].includes(forceGroup)) {
+      group = forceGroup;
+    } else if (country === 'MX') {
+      // MX: 33% A, 33% B, 34% C
+      const h = hashUuid(dealUuid) % 100;
+      group = h < 33 ? 'A' : h < 66 ? 'B' : 'C';
+    } else {
+      // CO: 85% C, 15% D
+      group = (hashUuid(dealUuid) % 100) < 15 ? 'D' : 'C';
+    }
+
+    console.log(`[ABC Test] Deal ${dealUuid} -> group: ${group}${forceGroup ? ' (forced)' : ''} [${country}]`);
     setAbcGroup(group);
 
     // Track assignment in PostHog for analytics
@@ -296,18 +312,19 @@ function HomeContent() {
       posthog.capture('ab_test_assigned', {
         group,
         deal_uuid: dealUuid,
-        country: 'CO',
+        country,
       });
     } catch (e) {
       console.warn('[ABC Test] PostHog tracking failed:', e);
     }
   }, [dealUuid, bnplPrices, isReengagement, forceGroup]);
 
-  // Write ABC group to HubSpot (once) — no aplica para re-engagement ni para MX
+  // Write ABC group to HubSpot (once) — no aplica para re-engagement
   useEffect(() => {
     if (!abcGroup || abcGroupWritten || !dealUuid || isReengagement) return;
-    if (bnplPrices?.country === 'MX') return; // MX siempre C, no se escribe el ABC test
-    
+    // Si ya tiene grupo en HubSpot, no re-escribir
+    if (bnplPrices?.abc_test_landing_co) { setAbcGroupWritten(true); return; }
+
     const writeGroup = async () => {
       try {
         const res = await fetch('/api/hubspot/abc-group', {
@@ -316,31 +333,32 @@ function HomeContent() {
           body: JSON.stringify({
             deal_uuid: dealUuid,
             group: abcGroup,
+            country: bnplPrices?.country || 'CO',
           }),
         });
         if (res.ok) {
           setAbcGroupWritten(true);
-          console.log(`[ABC Test] Group ${abcGroup} written to HubSpot`);
+          console.log(`[ABC Test] Group ${abcGroup} written to HubSpot [${bnplPrices?.country || 'CO'}]`);
         }
       } catch (err) {
         console.error('[ABC Test] Failed to write group to HubSpot:', err);
       }
     };
     writeGroup();
-  }, [abcGroup, abcGroupWritten, dealUuid, isReengagement, bnplPrices?.country]);
+  }, [abcGroup, abcGroupWritten, dealUuid, isReengagement, bnplPrices?.country, bnplPrices?.abc_test_landing_co]);
 
   // ─── Re-engagement A/B test ───
-
-  // 1. Determinar grupo: hash determinista
-  // CO: solo si es re-engagement (?camp=revision_oferta)
-  // MX: siempre (sin necesitar query param)
+  // DISABLED: AB re-engagement test — descomentar el bloque para reactivar
+  // Este test asignaba grupo A (sin envío) o B (con negociador) para MX/re-engagement
   useEffect(() => {
+    return; // DISABLED — quitar este return para reactivar
+    // eslint-disable-next-line no-unreachable
     const isMX = bnplPrices?.country === 'MX';
     if (!dealUuid || (!isReengagement && !isMX)) return;
 
     // Force group B for test UUID (priority over HubSpot)
     const FORCE_REENGAGEMENT_B = ['123'];
-    if (FORCE_REENGAGEMENT_B.includes(dealUuid)) {
+    if (FORCE_REENGAGEMENT_B.includes(dealUuid!)) {
       console.log(`[AB Reengagement] Group forced B for ${dealUuid}`);
       setReengagementGroup('B');
       return;
@@ -348,8 +366,8 @@ function HomeContent() {
 
     // Si HubSpot ya tiene el grupo asignado (seteado por el endpoint antes del envío), usarlo
     if (bnplPrices?.ab_test_landing === 'A' || bnplPrices?.ab_test_landing === 'B') {
-      setReengagementGroup(bnplPrices.ab_test_landing);
-      console.log(`[AB Reengagement] Group from HubSpot: ${bnplPrices.ab_test_landing}`);
+      setReengagementGroup(bnplPrices!.ab_test_landing!);
+      console.log(`[AB Reengagement] Group from HubSpot: ${bnplPrices!.ab_test_landing}`);
       return;
     }
 
@@ -370,7 +388,9 @@ function HomeContent() {
   }, [isReengagement, dealUuid, bnplPrices?.ab_test_landing, bnplPrices?.country]);
 
   // 2. Escribir grupo en HubSpot y trackear en PostHog (solo una vez)
+  // DISABLED: AB re-engagement test — descomentar para reactivar
   useEffect(() => {
+    return; // DISABLED — quitar este return para reactivar
     const isMX = bnplPrices?.country === 'MX';
     if (!reengagementGroup || reengagementGroupWritten || !dealUuid) return;
     if (!isReengagement && !isMX) return;
@@ -396,7 +416,7 @@ function HomeContent() {
 
       // Track en PostHog independiente del resultado de HubSpot
       try {
-        posthog.identify(dealUuid);
+        posthog.identify(dealUuid!);
         posthog.capture('$feature_flag_called', {
           '$feature_flag': 'ab-test-landing',
           '$feature_flag_response': reengagementGroup,
@@ -404,7 +424,7 @@ function HomeContent() {
         posthog.capture('ab_reengagement_assigned', {
           group: reengagementGroup,
           country: bnplPrices?.country ?? 'CO',
-          deal_uuid: dealUuid,
+          deal_uuid: dealUuid!,
           camp: campParam,
         });
       } catch (e) {
@@ -415,7 +435,9 @@ function HomeContent() {
   }, [reengagementGroup, reengagementGroupWritten, dealUuid, isReengagement, bnplPrices?.ab_test_landing, bnplPrices?.country]);
 
   // 3. IntersectionObserver: 60s leyendo el desgloce de costos → trigger negociador
+  // DISABLED: AB re-engagement test — descomentar para reactivar
   useEffect(() => {
+    return; // DISABLED — quitar este return para reactivar
     if (!isReengagement || reengagementGroup !== 'B') return;
 
     const section = document.querySelector('#configurator-section');
@@ -434,7 +456,7 @@ function HomeContent() {
       }
     }, { threshold: 0.3 });
 
-    observer.observe(section);
+    observer.observe(section!);
     return () => {
       observer.disconnect();
       if (visibleTimer) clearTimeout(visibleTimer);
@@ -908,7 +930,7 @@ function HomeContent() {
     );
   }
 
-  // ABC Test: A y B = landing basica, C = landing modular (Colombia only)
+  // ABC Test: A y B = landing basica, C/D = landing modular (CO y MX)
   if (bnplPrices && (abcGroup === 'A' || abcGroup === 'B')) {
     return (
       <>
@@ -922,8 +944,8 @@ function HomeContent() {
     );
   }
 
-  // Waiting for ABC group assignment (show loading briefly) - CO or undefined country
-  if (bnplPrices && !abcGroup && (bnplPrices.country === 'CO' || !bnplPrices.country)) {
+  // Waiting for ABC group assignment (show loading briefly)
+  if (bnplPrices && !abcGroup) {
     return (
       <div className="min-h-screen bg-white flex items-center justify-center">
         <div className="flex flex-col items-center gap-4">
@@ -933,7 +955,7 @@ function HomeContent() {
     );
   }
 
-  // Group C (or MX): Render the modular landing (current)
+  // Group C/D: Render the modular landing
   return (
     <main className="min-h-screen bg-white flex flex-col">
       {/* Analytics only for Group C */}

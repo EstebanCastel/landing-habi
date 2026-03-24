@@ -9,12 +9,13 @@ import { analytics, initScrollTracking, initPageTimeTracking } from "../lib/anal
 
 const montserrat = Montserrat({ subsets: ["latin"] })
 
-function formatPrice(price: string | number): string {
+function formatPrice(price: string | number, country: string = 'CO'): string {
   const numPrice = typeof price === 'string' ? parseFloat(price.replace(/[^\d]/g, '')) : price
   if (isNaN(numPrice)) return '$0'
-  return new Intl.NumberFormat('es-CO', {
+  const isMX = country === 'MX'
+  return new Intl.NumberFormat(isMX ? 'es-MX' : 'es-CO', {
     style: 'currency',
-    currency: 'COP',
+    currency: isMX ? 'MXN' : 'COP',
     minimumFractionDigits: 0,
     maximumFractionDigits: 0
   }).format(numPrice)
@@ -27,11 +28,13 @@ interface LandingBProps {
 
 export default function LandingB({ properties, dealUuid }: LandingBProps) {
   const [_forceUpdate] = useState(0)
+  const country = properties.country || 'CO'
+  const isMX = country === 'MX'
+  const brandName = isMX ? 'TuHabi' : 'Habi'
 
   // Analytics tracking for landing A
   // Delay to allow GA/Segment scripts to load (they use strategy="afterInteractive")
   useEffect(() => {
-    const country = properties.country || 'CO';
     const timer = setTimeout(() => {
       analytics.pageView(`offer_landing_a_${dealUuid}`, { dealUuid, country });
     }, 2000);
@@ -42,20 +45,22 @@ export default function LandingB({ properties, dealUuid }: LandingBProps) {
       if (cleanupScroll) cleanupScroll();
       if (cleanupTime) cleanupTime();
     };
-  }, [dealUuid, properties.country]);
+  }, [dealUuid, country]);
 
-  // Determinar si BNPL esta habilitado
-  const bnplEnabled = properties.negocio_aplica_para_bnpl?.toLowerCase() === '1' 
+  // Determinar si BNPL esta habilitado (MX nunca tiene BNPL)
+  const bnplEnabled = !isMX && (
+    properties.negocio_aplica_para_bnpl?.toLowerCase() === '1'
     || properties.negocio_aplica_para_bnpl?.toLowerCase() === 'si'
     || properties.negocio_aplica_para_bnpl?.toLowerCase() === 'sí'
     || properties.negocio_aplica_para_bnpl?.toLowerCase() === 'true'
+  )
 
   // Precio principal: si hay BNPL usar bnpl9, sino precio_comite
   const precioComite = properties.precio_comite || '0'
   const bnpl3 = properties.bnpl3 || '0'
   const bnpl6 = properties.bnpl6 || '0'
   const bnpl9 = properties.bnpl9 || '0'
-  
+
   // Precio hero: si BNPL habilitado y hay bnpl9 > 0, mostrar bnpl9; sino precio_comite
   const heroPrice = bnplEnabled && Number(bnpl9.replace(/[^\d]/g, '')) > 0
     ? bnpl9
@@ -131,7 +136,7 @@ export default function LandingB({ properties, dealUuid }: LandingBProps) {
             <div className="flex justify-center xl:justify-end xl:items-end xl:absolute xl:right-0 xl:bottom-0 xl:top-10 print-hero-image">
               <Image 
                 src="/logo/imagen.svg" 
-                alt="Habi - Compramos tu vivienda a tu medida" 
+                alt={`${brandName} - Compramos tu vivienda a tu medida`}
                 width={400} 
                 height={300} 
                 priority
@@ -154,7 +159,7 @@ export default function LandingB({ properties, dealUuid }: LandingBProps) {
                 Precio de compra
               </p>
               <div className="text-3xl sm:text-4xl lg:text-5xl font-bold print-price-value" style={{ color: "#8A00E6" }}>
-                {formatPrice(heroPrice)}
+                {formatPrice(heroPrice, country)}
               </div>
             </div>
           </div>
@@ -221,14 +226,14 @@ export default function LandingB({ properties, dealUuid }: LandingBProps) {
                 </div>
                 <div className="flex-1 p-4 sm:p-6 text-center text-white" style={{ backgroundColor: "#8A00E6" }}>
                   <p className="text-sm sm:text-base mb-2 sm:mb-3">Precio de compra</p>
-                  <p className="text-2xl sm:text-3xl lg:text-4xl font-bold">{formatPrice(bnpl9)}</p>
+                  <p className="text-2xl sm:text-3xl lg:text-4xl font-bold">{formatPrice(bnpl9, country)}</p>
                 </div>
                 <div className="flex-1 bg-white p-4 sm:p-6 flex flex-col justify-center">
                   <p className="text-gray-600 text-sm sm:text-base text-center sm:text-left">
                     Te pagamos en <strong className="text-gray-800">9 cuotas</strong>
                   </p>
                   <p className="text-gray-600 text-sm sm:text-base text-center sm:text-left">
-                    de <strong className="text-gray-800">{formatPrice(Number(bnpl9.replace(/[^\d]/g, '')) / 9)}</strong>
+                    de <strong className="text-gray-800">{formatPrice(Number(bnpl9.replace(/[^\d]/g, '')) / 9, country)}</strong>
                   </p>
                   <div className="flex items-center justify-center sm:justify-start gap-1 mt-2">
                     <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20" style={{ color: "#8A00E6" }}>
@@ -248,14 +253,14 @@ export default function LandingB({ properties, dealUuid }: LandingBProps) {
                 </div>
                 <div className="flex-1 p-4 sm:p-6 text-center" style={{ backgroundColor: "#F9F0FF", color: "#8A00E6" }}>
                   <p className="text-sm sm:text-base mb-2 sm:mb-3">Precio de compra</p>
-                  <p className="text-2xl sm:text-3xl font-bold">{formatPrice(bnpl6)}</p>
+                  <p className="text-2xl sm:text-3xl font-bold">{formatPrice(bnpl6, country)}</p>
                 </div>
                 <div className="flex-1 bg-white p-4 sm:p-6 flex flex-col justify-center">
                   <p className="text-gray-600 text-sm sm:text-base text-center sm:text-left">
                     Te pagamos en <strong className="text-gray-800">6 cuotas</strong>
                   </p>
                   <p className="text-gray-600 text-sm sm:text-base text-center sm:text-left">
-                    de <strong className="text-gray-800">{formatPrice(Number(bnpl6.replace(/[^\d]/g, '')) / 6)}</strong>
+                    de <strong className="text-gray-800">{formatPrice(Number(bnpl6.replace(/[^\d]/g, '')) / 6, country)}</strong>
                   </p>
                   <div className="flex items-center justify-center sm:justify-start gap-1 mt-2">
                     <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20" style={{ color: "#8A00E6" }}>
@@ -273,14 +278,14 @@ export default function LandingB({ properties, dealUuid }: LandingBProps) {
                 </div>
                 <div className="flex-1 p-4 sm:p-6 text-center" style={{ backgroundColor: "#F9F0FF", color: "#8A00E6" }}>
                   <p className="text-sm sm:text-base mb-2 sm:mb-3">Precio de compra</p>
-                  <p className="text-2xl sm:text-3xl font-bold">{formatPrice(bnpl3)}</p>
+                  <p className="text-2xl sm:text-3xl font-bold">{formatPrice(bnpl3, country)}</p>
                 </div>
                 <div className="flex-1 bg-white p-4 sm:p-6 flex flex-col justify-center">
                   <p className="text-gray-600 text-sm sm:text-base text-center sm:text-left">
                     Te pagamos en <strong className="text-gray-800">3 cuotas</strong>
                   </p>
                   <p className="text-gray-600 text-sm sm:text-base text-center sm:text-left">
-                    de <strong className="text-gray-800">{formatPrice(Number(bnpl3.replace(/[^\d]/g, '')) / 3)}</strong>
+                    de <strong className="text-gray-800">{formatPrice(Number(bnpl3.replace(/[^\d]/g, '')) / 3, country)}</strong>
                   </p>
                   <div className="flex items-center justify-center sm:justify-start gap-1 mt-2">
                     <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20" style={{ color: "#8A00E6" }}>
@@ -298,7 +303,7 @@ export default function LandingB({ properties, dealUuid }: LandingBProps) {
                 </div>
                 <div className="flex-1 p-4 sm:p-6 text-center" style={{ backgroundColor: "#F9F0FF", color: "#8A00E6" }}>
                   <p className="text-sm sm:text-base mb-2 sm:mb-3">Precio de compra</p>
-                  <p className="text-2xl sm:text-3xl font-bold">{formatPrice(precioComite)}</p>
+                  <p className="text-2xl sm:text-3xl font-bold">{formatPrice(precioComite, country)}</p>
                 </div>
                 <div className="flex-1 bg-white p-4 sm:p-6 flex flex-col justify-center">
                   <p className="text-gray-600 text-sm sm:text-base text-center sm:text-left">
@@ -391,7 +396,7 @@ export default function LandingB({ properties, dealUuid }: LandingBProps) {
               <span className="font-medium">Procesos efectivos,</span> <span className="block sm:inline">pagos seguros</span>
             </h2>
             <p className="text-gray-600 text-base sm:text-lg lg:text-xl max-w-5xl mx-auto px-4">
-              En Habi, preferimos que nuestros clientes hablen por nosotros. ¡Gracias por su confianza!
+              En {brandName}, preferimos que nuestros clientes hablen por nosotros. ¡Gracias por su confianza!
             </p>
           </div>
 
