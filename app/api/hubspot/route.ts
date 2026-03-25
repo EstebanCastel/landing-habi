@@ -330,50 +330,35 @@ export async function GET(request: NextRequest) {
     
     if (country === 'MX') {
       // México: no tiene pago a cuotas
+      // Usa bnpl_1__comercial_ como precio negociado (misma propiedad que CO)
       const ofertaBaseMx = parseHubSpotNumber(properties.oferta_final_prestamo_mx_calculada)
-      const valorNegociado = parseHubSpotNumber(properties.valor_negociado)
       const topeAprobadoMx = parseHubSpotNumber(properties.final_final_aprobado_bo_prestamo_mx_calculo)
-      
-      // Precio base MX (equivalente a precio_comite en CO)
+
       const ofertaBaseMxNum = ofertaBaseMx ? Number(ofertaBaseMx) : 0
-      const valorNegociadoNum = valorNegociado ? Number(valorNegociado) : 0
       const topeAprobadoMxNum = topeAprobadoMx ? Number(topeAprobadoMx) : 0
-      
+
       // El precio_comite_original para MX es oferta_final_prestamo_mx_calculada
       precioComiteOriginal = ofertaBaseMx || null
-      
+
+      // Tope máximo MX: final_final_aprobado_bo_prestamo_mx_calculo (si existe), sino oferta base
+      const topeMx = topeAprobadoMxNum > 0 ? topeAprobadoMxNum : ofertaBaseMxNum
+
       // Jerarquía de precio MX:
-      // 1. final_final_aprobado_bo_prestamo_mx_calculo (tope máximo, si existe)
-      // 2. valor_negociado (negociado, capado al tope)
+      // 1. bnpl_1__comercial_ (precio negociado por comercial, capado al tope)
+      // 2. final_final_aprobado_bo_prestamo_mx_calculo (tope máximo, si existe)
       // 3. oferta_final_prestamo_mx_calculada (precio base)
-      if (topeAprobadoMxNum > 0) {
-        // Tope aprobado existe: usar como precio final
-        // valor_negociado debe ser <= tope aprobado
-        if (valorNegociadoNum > 0 && valorNegociadoNum <= topeAprobadoMxNum) {
-          precioComiteFinal = valorNegociado!
-          comercialRaw = valorNegociado
-        } else if (valorNegociadoNum > topeAprobadoMxNum) {
+      if (bnpl1ComercialNum && bnpl1ComercialNum > 0) {
+        if (bnpl1ComercialNum <= topeMx) {
+          precioComiteFinal = bnpl1ComercialValue!
+        } else {
           // Capear al tope
-          precioComiteFinal = topeAprobadoMx!
-          comercialRaw = valorNegociado
-        } else {
-          // No hay valor_negociado, usar tope aprobado
-          precioComiteFinal = topeAprobadoMx!
-          comercialRaw = null // no hubo negociación real, usar HESH
+          precioComiteFinal = topeMx.toString()
         }
-      } else if (valorNegociadoNum > 0) {
-        // No hay tope aprobado, pero sí hay valor_negociado
-        // valor_negociado debe ser <= oferta_final_prestamo_mx_calculada
-        if (valorNegociadoNum <= ofertaBaseMxNum) {
-          precioComiteFinal = valorNegociado!
-          comercialRaw = valorNegociado
-        } else {
-          // Capear al precio base
-          precioComiteFinal = ofertaBaseMx || bnpl1Value
-          comercialRaw = valorNegociado
-        }
+        comercialRaw = bnpl1ComercialValue
+      } else if (topeAprobadoMxNum > 0) {
+        precioComiteFinal = topeAprobadoMx!
+        comercialRaw = null
       } else {
-        // Sin negociación: precio base
         precioComiteFinal = ofertaBaseMx || bnpl1Value
         comercialRaw = null
       }
