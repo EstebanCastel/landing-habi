@@ -113,7 +113,7 @@ export default function LandingB({ properties, dealUuid }: LandingBProps) {
           <div className="relative flex flex-col xl:flex-row xl:items-start xl:justify-between px-4 sm:px-8 py-8 sm:py-12 lg:py-16 min-h-[400px]">
             <div className="flex-1 max-w-2xl z-10 text-center xl:text-left mb-6 xl:mb-0 print-hero-text">
               <h1 className={`${montserrat.className} text-3xl sm:text-4xl lg:text-5xl xl:text-5xl mb-4 sm:mb-6 leading-tight print-hero-title`}>
-                <span className="text-white font-bold block">Compramos tu vivienda</span>
+                <span className="text-white font-bold block">{isMX ? 'Te pagamos directamente por tu inmueble' : 'Compramos tu vivienda'}</span>
                 <span className="block font-black text-4xl sm:text-5xl lg:text-6xl xl:text-6xl mt-2 print-hero-subtitle" style={{ color: "#EACDFE" }}>
                   a tu medida
                 </span>
