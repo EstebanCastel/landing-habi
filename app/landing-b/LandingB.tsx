@@ -127,7 +127,10 @@ export default function LandingB({ properties, dealUuid }: LandingBProps) {
                 ) : (
                   <>
                     <p>Recibe una oferta directa por tu inmueble.</p>
-                    <p>Sin publicar, sin visitas de extraños, sin negociaciones eternas.</p>
+                    <p>{isMX
+                      ? 'Sin publicar, sin visitas de desconocidos, sin complicaciones.'
+                      : 'Sin publicar, sin visitas de extraños, sin negociaciones eternas.'
+                    }</p>
                   </>
                 )}
               </div>
@@ -349,7 +352,10 @@ export default function LandingB({ properties, dealUuid }: LandingBProps) {
               </div>
               <div className="bg-white p-6 sm:p-8 text-center flex-1 flex items-center justify-center">
                 <p className="text-gray-700 text-sm sm:text-base leading-relaxed">
-                  Completa nuestro formulario con los datos de tu propiedad. Te daremos una propuesta de compra en menos de 24 horas.
+                  {isMX
+                    ? 'Completa nuestro formulario con los datos de tu propiedad. Te daremos una propuesta de compra.'
+                    : 'Completa nuestro formulario con los datos de tu propiedad. Te daremos una propuesta de compra en menos de 24 horas.'
+                  }
                 </p>
               </div>
             </div>
@@ -358,12 +364,15 @@ export default function LandingB({ properties, dealUuid }: LandingBProps) {
               <div className="bg-purple-50 p-6 sm:p-8 text-center flex-1 flex items-center justify-center">
                 <span className={`${montserrat.className} text-xl sm:text-2xl lg:text-3xl font-bold block`}
                       style={{ color: "#7400C2" }}>
-                  2. Elige tu producto
+                  {isMX ? '2. Revisa tu oferta' : '2. Elige tu producto'}
                 </span>
               </div>
               <div className="bg-white p-6 sm:p-8 text-center flex-1 flex items-center justify-center">
                 <p className="text-gray-700 text-sm sm:text-base leading-relaxed">
-                  Selecciona el mejor producto para ti: desde liquidez inmediata hasta el mejor precio en cuotas.
+                  {isMX
+                    ? 'Revisa los detalles de tu oferta de compra y aclara cualquier duda con tu asesor.'
+                    : 'Selecciona el mejor producto para ti: desde liquidez inmediata hasta el mejor precio en cuotas.'
+                  }
                 </p>
               </div>
             </div>
@@ -377,7 +386,10 @@ export default function LandingB({ properties, dealUuid }: LandingBProps) {
               </div>
               <div className="bg-white p-6 sm:p-8 text-center flex-1 flex items-center justify-center">
                 <p className="text-gray-700 text-sm sm:text-base leading-relaxed">
-                  Firmamos el contrato y recibes tu dinero en los tiempos estipulados en la promesa de compraventa según el producto elegido.
+                  {isMX
+                    ? 'Firmamos el contrato de compraventa y recibes tu dinero de forma segura y rápida.'
+                    : 'Firmamos el contrato y recibes tu dinero en los tiempos estipulados en la promesa de compraventa según el producto elegido.'
+                  }
                 </p>
               </div>
             </div>
@@ -403,11 +415,15 @@ export default function LandingB({ properties, dealUuid }: LandingBProps) {
           <div className="relative grid grid-cols-1 lg:grid-cols-3 gap-6 sm:gap-8">
             <div className="hidden lg:block absolute top-1/2 left-0 right-0 h-2 pointer-events-none -translate-y-1/2 z-0"
                  style={{ backgroundColor: "#DAA7FB" }}></div>
-            {[
+            {(isMX ? [
+              { name: 'María González', img: '/logo/cliente1.png', subtitle: 'Vendió su departamento en CDMX', quote: `"El proceso con ${brandName} fue muy transparente. Me dieron una oferta justa y todo se resolvió rápido, sin complicaciones."` },
+              { name: 'Roberto Hernández', img: '/logo/cliente2.png', subtitle: 'Vendió su casa en Guadalajara', quote: `"${brandName} me acompañó en todo el proceso. Fue sencillo y recibí mi dinero sin contratiempos."` },
+              { name: 'Ana Martínez', img: '/logo/cliente3.png', subtitle: 'Vendió su propiedad en Monterrey', quote: `"Excelente experiencia con ${brandName}. Me explicaron cada paso y cumplieron con todo lo acordado."` },
+            ] : [
               { name: 'Felipe y Natalia', img: '/logo/cliente1.png', subtitle: 'Invirtieron en la vivienda de sus sueños', quote: '"Calificamos a Habi con 10/10 por la tranquilidad, y eficiencia del proceso, nos hicieron sentir como parte de una familia al acompañarnos en cada paso"' },
               { name: 'Carlos Rincón', img: '/logo/cliente2.png', subtitle: 'Vendió su apartamento en Suba', quote: '"Mi experiencia con Habi fue un 9/10, estuvieron de mi lado siempre"' },
               { name: 'Martha Lucía Roa', img: '/logo/cliente3.png', subtitle: 'Encontró su hogar ideal', quote: '"Los califico con 9/10 por su disposición, fue un hermoso proceso y respondieron a todas nuestras preguntas"' },
-            ].map((t) => (
+            ]).map((t) => (
               <div key={t.name} className="rounded-2xl sm:rounded-3xl overflow-hidden shadow-lg relative z-10">
                 <div className="bg-purple-50 p-4 sm:p-6 text-center">
                   <div className="w-16 h-16 sm:w-20 sm:h-20 mx-auto mb-3 sm:mb-4 rounded-full overflow-hidden">
