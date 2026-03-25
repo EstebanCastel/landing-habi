@@ -15,6 +15,11 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Missing deal_uuid' }, { status: 400 })
     }
 
+    // MX: 48 horas, CO: 24 horas
+    const country = request.nextUrl.searchParams.get('country') || 'CO'
+    const countdownHours = country === 'MX' ? 48 : 24
+    const countdownMs = countdownHours * 60 * 60 * 1000
+
     const supabase = getSupabaseAdmin()
 
     // Check if countdown already exists
@@ -32,7 +37,7 @@ export async function GET(request: NextRequest) {
 
     if (existing) {
       const startedAt = new Date(existing.started_at)
-      const expiresAt = new Date(startedAt.getTime() + 24 * 60 * 60 * 1000)
+      const expiresAt = new Date(startedAt.getTime() + countdownMs)
       return NextResponse.json({
         started_at: startedAt.toISOString(),
         expires_at: expiresAt.toISOString(),
@@ -41,7 +46,7 @@ export async function GET(request: NextRequest) {
 
     // Create new countdown
     const now = new Date()
-    const expiresAt = new Date(now.getTime() + 24 * 60 * 60 * 1000)
+    const expiresAt = new Date(now.getTime() + countdownMs)
 
     const { error: insertError } = await supabase
       .from('offer_countdown')

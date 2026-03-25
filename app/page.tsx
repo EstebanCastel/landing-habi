@@ -966,7 +966,7 @@ function HomeContent() {
       </Suspense>
       {/* Header sticky - Countdown + Navbar + panel imagen móvil (todo en un bloque, sin gap) */}
       <div className="sticky top-0 z-50">
-        <OfferCountdown dealUuid={dealUuid} />
+        <OfferCountdown dealUuid={dealUuid} country={bnplPrices?.country} />
         <Navbar activeCountry={bnplPrices?.country ?? 'CO'} />
 
         {/* Panel imagen/mapa — solo móvil, dentro del sticky para evitar gap */}

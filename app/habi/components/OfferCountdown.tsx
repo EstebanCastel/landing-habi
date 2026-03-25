@@ -4,9 +4,10 @@ import { useState, useEffect, useCallback } from 'react';
 
 interface OfferCountdownProps {
   dealUuid: string;
+  country?: string;
 }
 
-export default function OfferCountdown({ dealUuid }: OfferCountdownProps) {
+export default function OfferCountdown({ dealUuid, country = 'CO' }: OfferCountdownProps) {
   const [timeLeft, setTimeLeft] = useState<{ days: number; hours: number; minutes: number; seconds: number } | null>(null);
   const [expired, setExpired] = useState(false);
   const [expiresAt, setExpiresAt] = useState<Date | null>(null);
@@ -16,7 +17,7 @@ export default function OfferCountdown({ dealUuid }: OfferCountdownProps) {
 
     const fetchCountdown = async () => {
       try {
-        const res = await fetch(`/api/countdown?deal_uuid=${dealUuid}`);
+        const res = await fetch(`/api/countdown?deal_uuid=${dealUuid}&country=${country}`);
         if (res.ok) {
           const data = await res.json();
           setExpiresAt(new Date(data.expires_at));
