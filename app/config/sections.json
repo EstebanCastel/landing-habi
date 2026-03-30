@@ -46,7 +46,7 @@
       "panelType": "image",
       "panelImagePosition": "center 40%",
       "dependsOn": { "modalidadVenta": "habi", "razonVentaLiquidez": "true" },
-      "enabled": true
+      "enabled": false
     },
     {
       "id": "habi-direct",
@@ -56,8 +56,8 @@
       "panelImagePosition": "center 30%",
       "dependsOn": { "modalidadVenta": "habi" },
       "refName": "donation",
-      "showCostToggles": false,
-      "showDonation": false,
+      "showCostToggles": true,
+      "showDonation": true,
       "enabled": true
     },
     {
@@ -68,7 +68,7 @@
       "panelImagePosition": "center 30%",
       "dependsOn": { "modalidadVenta": "inmobiliaria" },
       "refName": "donation",
-      "enabled": false
+      "enabled": true
     },
     {
       "id": "sell-by-yourself",
@@ -81,7 +81,7 @@
       "enabled": false
     }
   ],
-  "showChatbot": false,
+  "showChatbot": true,
   "donationVideos": [
     "/DJI_20251210101636_0086_D.MP4",
     "/DJI_20251210171250_0012_D.MP4",
