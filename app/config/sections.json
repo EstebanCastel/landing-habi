@@ -56,8 +56,8 @@
       "panelImagePosition": "center 30%",
       "dependsOn": { "modalidadVenta": "habi" },
       "refName": "donation",
-      "showCostToggles": true,
-      "showDonation": true,
+      "showCostToggles": false,
+      "showDonation": false,
       "enabled": true
     },
     {
@@ -68,7 +68,7 @@
       "panelImagePosition": "center 30%",
       "dependsOn": { "modalidadVenta": "inmobiliaria" },
       "refName": "donation",
-      "enabled": true
+      "enabled": false
     },
     {
       "id": "sell-by-yourself",
@@ -81,7 +81,7 @@
       "enabled": false
     }
   ],
-  "showChatbot": true,
+  "showChatbot": false,
   "donationVideos": [
     "/DJI_20251210101636_0086_D.MP4",
     "/DJI_20251210171250_0012_D.MP4",
