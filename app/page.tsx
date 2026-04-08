@@ -246,7 +246,7 @@ function HomeContent() {
   }, [channelParam, searchParams]);
 
   // A/B/C Test: respect existing HubSpot group, assign via hash for new deals
-  // CO: 85% C, 15% D | MX: 33% A, 33% B, 34% C
+  // CO: 100% C | MX: 33% A, 33% B, 34% C
   useEffect(() => {
     if (!dealUuid || !bnplPrices) return;
 
@@ -299,8 +299,8 @@ function HomeContent() {
       const h = hashUuid(dealUuid) % 100;
       group = h < 33 ? 'A' : h < 66 ? 'B' : 'C';
     } else {
-      // CO: 85% C, 15% D
-      group = (hashUuid(dealUuid) % 100) < 15 ? 'D' : 'C';
+      // CO: 100% C
+      group = 'C';
     }
 
     console.log(`[ABC Test] Deal ${dealUuid} -> group: ${group}${forceGroup ? ' (forced)' : ''} [${country}]`);
