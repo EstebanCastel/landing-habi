@@ -5,9 +5,10 @@ import { useState, useEffect, useCallback } from 'react';
 interface OfferCountdownProps {
   dealUuid: string;
   country?: string;
+  noRecibioOferta?: string | null;
 }
 
-export default function OfferCountdown({ dealUuid, country = 'CO' }: OfferCountdownProps) {
+export default function OfferCountdown({ dealUuid, country = 'CO', noRecibioOferta }: OfferCountdownProps) {
   const [timeLeft, setTimeLeft] = useState<{ days: number; hours: number; minutes: number; seconds: number } | null>(null);
   const [expired, setExpired] = useState(false);
   const [expiresAt, setExpiresAt] = useState<Date | null>(null);
@@ -17,6 +18,28 @@ export default function OfferCountdown({ dealUuid, country = 'CO' }: OfferCountd
 
     const fetchCountdown = async () => {
       try {
+        // Si no_recibio_oferta tiene valor, resetear countdown a 48h (solo una vez por navegador)
+        if (noRecibioOferta) {
+          const resetKey = `countdown_email_reset_${dealUuid}`;
+          const alreadyReset = localStorage.getItem(resetKey);
+
+          if (!alreadyReset) {
+            const resetRes = await fetch('/api/countdown', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ deal_uuid: dealUuid }),
+            });
+            if (resetRes.ok) {
+              const resetData = await resetRes.json();
+              localStorage.setItem(resetKey, new Date().toISOString());
+              setExpiresAt(new Date(resetData.expires_at));
+              console.log(`[Countdown] Reset to 48h for ${dealUuid} (no_recibio_oferta)`);
+              return;
+            }
+          }
+        }
+
+        // Flujo normal: obtener countdown existente o crear uno nuevo
         const res = await fetch(`/api/countdown?deal_uuid=${dealUuid}&country=${country}`);
         if (res.ok) {
           const data = await res.json();
@@ -28,7 +51,7 @@ export default function OfferCountdown({ dealUuid, country = 'CO' }: OfferCountd
     };
 
     fetchCountdown();
-  }, [dealUuid]);
+  }, [dealUuid, noRecibioOferta, country]);
 
   const updateTimeLeft = useCallback(() => {
     if (!expiresAt) return;

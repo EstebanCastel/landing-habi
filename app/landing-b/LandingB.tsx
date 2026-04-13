@@ -101,7 +101,7 @@ export default function LandingB({ properties, dealUuid }: LandingBProps) {
     <div key={`${dealUuid}-${_forceUpdate}`} className="min-h-screen bg-gray-50">
       {/* Countdown */}
       <div className="sticky top-0 z-50">
-        <OfferCountdown dealUuid={dealUuid} country={country} />
+        <OfferCountdown dealUuid={dealUuid} country={country} noRecibioOferta={properties.no_recibio_oferta} />
       </div>
 
       {/* Hero Section */}

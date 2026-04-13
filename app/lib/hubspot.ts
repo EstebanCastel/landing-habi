@@ -32,6 +32,7 @@ export interface HubSpotProperties {
   precio_intermedio?: string | null
   ab_test_landing?: 'A' | 'B' | null
   abc_test_landing_co?: string | null
+  no_recibio_oferta?: string | null
   error?: boolean
   message?: string
 }
