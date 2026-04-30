@@ -40,6 +40,15 @@
       "enabled": true
     },
     {
+      "id": "tramites-cliente-bnpl",
+      "component": "TramitesClienteBnplSection",
+      "panelImage": "/Image_202602031055.jpeg",
+      "panelType": "image",
+      "panelImagePosition": "center 30%",
+      "dependsOn": { "modalidadVenta": "habi", "bnplEnabled": "true", "areaValleAburra": "true" },
+      "enabled": true
+    },
+    {
       "id": "liquidity-section",
       "component": "LiquiditySection",
       "panelImage": "/Ultrarealistic_lifestyle_editorial_202602031 (3).jpeg",

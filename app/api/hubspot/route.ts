@@ -61,7 +61,7 @@ async function searchDealByUuid(dealUuid: string, apiKey: string) {
         ]
       }
     ],
-    properties: ['bnpl_3', 'bnpl_6', 'bnpl_9', 'precio_comite', 'whatsapp_asesor', 'deal_uuid', 'bnpl_1__comercial_', 'bnpl_3__comercial_', 'bnpl_6__comercial_', 'bnpl_9__comercial_', 'valor_subsidiado', 'valor_subsidiado_extraordinario', 'subsidio_aprobado_lider', 'subsidio_aprobado_director', 'nombre_del_conjunto', 'area_construida', 'direccion', 'numero_habitaciones', 'v_o_num_hab_confirmadas', 'numero_de_banos', 'tipo_inmueble_id', 'negocio_aplica_para_bnpl_', 'razon_de_venta_usuario_gabi_mx', 'pipeline', 'oferta_final_prestamo_mx_calculada', 'valor_negociado', 'final_final_aprobado_bo_prestamo_mx_calculo', 'valor_reparaciones', 'quiere_ofertar_alianza', 'precio_maximo_prestamo', 'precio_intermedio', 'ab_test_landing', 'abc_test_landing_co', 'no_recibio_oferta'],
+    properties: ['bnpl_3', 'bnpl_6', 'bnpl_9', 'precio_comite', 'whatsapp_asesor', 'deal_uuid', 'bnpl_1__comercial_', 'bnpl_3__comercial_', 'bnpl_6__comercial_', 'bnpl_9__comercial_', 'valor_subsidiado', 'valor_subsidiado_extraordinario', 'subsidio_aprobado_lider', 'subsidio_aprobado_director', 'nombre_del_conjunto', 'area_construida', 'direccion', 'numero_habitaciones', 'v_o_num_hab_confirmadas', 'numero_de_banos', 'tipo_inmueble_id', 'negocio_aplica_para_bnpl_', 'razon_de_venta_usuario_gabi_mx', 'pipeline', 'oferta_final_prestamo_mx_calculada', 'valor_negociado', 'final_final_aprobado_bo_prestamo_mx_calculo', 'valor_reparaciones', 'quiere_ofertar_alianza', 'precio_maximo_prestamo', 'precio_intermedio', 'ab_test_landing', 'abc_test_landing_co', 'no_recibio_oferta', 'area_metropolitana'],
     limit: 1
   }
 
@@ -100,7 +100,7 @@ async function getDealById(dealId: string, apiKey: string) {
   const url = `https://api.hubapi.com/crm/v3/objects/deals/${dealId}`
   
   const params = new URLSearchParams({
-    properties: 'bnpl_3,bnpl_6,bnpl_9,precio_comite,whatsapp_asesor,deal_uuid,dealname,bnpl_1__comercial_,bnpl_3__comercial_,bnpl_6__comercial_,bnpl_9__comercial_,valor_subsidiado,valor_subsidiado_extraordinario,subsidio_aprobado_lider,subsidio_aprobado_director,nombre_del_conjunto,area_construida,direccion,numero_habitaciones,v_o_num_hab_confirmadas,numero_de_banos,tipo_inmueble_id,negocio_aplica_para_bnpl_,razon_de_venta_usuario_gabi_mx,pipeline,oferta_final_prestamo_mx_calculada,valor_negociado,final_final_aprobado_bo_prestamo_mx_calculo,valor_reparaciones,quiere_ofertar_alianza,precio_maximo_prestamo,precio_intermedio,ab_test_landing,abc_test_landing_co,no_recibio_oferta'
+    properties: 'bnpl_3,bnpl_6,bnpl_9,precio_comite,whatsapp_asesor,deal_uuid,dealname,bnpl_1__comercial_,bnpl_3__comercial_,bnpl_6__comercial_,bnpl_9__comercial_,valor_subsidiado,valor_subsidiado_extraordinario,subsidio_aprobado_lider,subsidio_aprobado_director,nombre_del_conjunto,area_construida,direccion,numero_habitaciones,v_o_num_hab_confirmadas,numero_de_banos,tipo_inmueble_id,negocio_aplica_para_bnpl_,razon_de_venta_usuario_gabi_mx,pipeline,oferta_final_prestamo_mx_calculada,valor_negociado,final_final_aprobado_bo_prestamo_mx_calculo,valor_reparaciones,quiere_ofertar_alianza,precio_maximo_prestamo,precio_intermedio,ab_test_landing,abc_test_landing_co,no_recibio_oferta,area_metropolitana'
   })
   
   const response = await fetch(`${url}?${params}`, {
@@ -400,6 +400,7 @@ export async function GET(request: NextRequest) {
       ab_test_landing: properties.ab_test_landing || null,
       abc_test_landing_co: properties.abc_test_landing_co || null,
       no_recibio_oferta: properties.no_recibio_oferta || null,
+      area_metropolitana: properties.area_metropolitana || null,
     }
     
     return NextResponse.json(result, { headers })

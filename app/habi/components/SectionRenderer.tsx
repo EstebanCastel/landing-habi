@@ -2,8 +2,8 @@
 
 import { useMemo, useEffect, useRef, useCallback } from 'react';
 import { getComponent, getVisibleSections, SectionConfig } from '../../config/componentsRegistry';
-import { HabiConfiguration } from '../../types/habi';
-import type { HubSpotProperties } from '../../lib/hubspot';
+import { HabiConfiguration, COSTOS_PERCENTAGES } from '../../types/habi';
+import { isTramitesClienteBnplEligible, type HubSpotProperties } from '../../lib/hubspot';
 import type { HeshCostBreakdown } from '../../api/hesh/route';
 import { analytics } from '../../lib/analytics';
 
@@ -88,7 +88,8 @@ const getRefCallback = (
 // Props específicas para cada componente
 const getComponentProps = (
   section: SectionConfig,
-  props: SectionRendererProps
+  props: SectionRendererProps,
+  isTramitesClienteBnplEligibleFlag: boolean
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
 ): Record<string, any> => {
   const refCallback = getRefCallback(section.refName, props);
@@ -103,22 +104,31 @@ const getComponentProps = (
       
     case 'ComparablesSection': {
       let evaluacion = props.currentPrice;
-      if (props.bnplPrices && props.costBreakdown) {
-        const isMx = props.bnplPrices.country === 'MX';
-        // Evaluacion siempre usa precio de 1 cuota (contado), no cambia con cuotas
-        // MX: precio_comite_original (precio base algoritmo)
-        // CO: precio_comite (precio contado / 1 cuota)
-        const precioBase = isMx
-          ? Number(props.bnplPrices.precio_comite_original || props.bnplPrices.precio_comite || 0)
-          : Number(props.bnplPrices.precio_comite || 0);
-        const costosSinUtilidad =
-          props.costBreakdown.comision.total +
-          props.costBreakdown.gastosMensuales.total +
-          props.costBreakdown.tarifaServicio.costoFinanciacion +
-          props.costBreakdown.tramites.total +
-          props.costBreakdown.remodelacion.total;
+      const isMx = props.bnplPrices?.country === 'MX';
+      // Evaluacion siempre usa precio de 1 cuota (contado), no cambia con cuotas
+      // MX: precio_comite_original (precio base algoritmo)
+      // CO: precio_comite (precio contado / 1 cuota)
+      const precioBase = props.bnplPrices
+        ? (isMx
+            ? Number(props.bnplPrices.precio_comite_original || props.bnplPrices.precio_comite || 0)
+            : Number(props.bnplPrices.precio_comite || 0))
+        : 0;
+      if (precioBase > 0) {
+        // Si HESH disponible usa los costos reales; si no, usa los mismos % que muestra el desglose visible
+        const vm = props.valorMercado;
+        const costosSinUtilidad = props.costBreakdown
+          ? props.costBreakdown.comision.total +
+            props.costBreakdown.gastosMensuales.total +
+            props.costBreakdown.tarifaServicio.costoFinanciacion +
+            props.costBreakdown.tramites.total +
+            props.costBreakdown.remodelacion.total
+          : (vm * COSTOS_PERCENTAGES.comisionTotal) / 100 +
+            (vm * COSTOS_PERCENTAGES.propertyMensual) / 100 +
+            vm * 0.03 +
+            (vm * COSTOS_PERCENTAGES.tramites) / 100 +
+            (vm * COSTOS_PERCENTAGES.remodelacion) / 100;
+        const utilidadPct = props.costBreakdown?.tarifaServicio.utilidadEsperada ?? 0.032;
         const baseSinComisionHabi = precioBase + costosSinUtilidad;
-        const utilidadPct = props.costBreakdown.tarifaServicio.utilidadEsperada;
         evaluacion = utilidadPct < 1
           ? Math.round(baseSinComisionHabi / (1 - utilidadPct))
           : Math.round(baseSinComisionHabi);
@@ -200,6 +210,14 @@ const getComponentProps = (
         showCostToggles: section.showCostToggles ?? false,
         showDonation: section.showDonation ?? true,
         bnplPrices: props.bnplPrices,
+        isTramitesClienteBnplEligible: isTramitesClienteBnplEligibleFlag,
+      };
+
+    case 'TramitesClienteBnplSection':
+      return {
+        configuration: props.configuration,
+        setConfiguration: props.setConfiguration,
+        bnplPrices: props.bnplPrices,
       };
       
     case 'InmobiliariaSection':
@@ -254,11 +272,15 @@ export default function SectionRenderer(props: SectionRendererProps) {
       ? 'true'
       : 'false'
     : 'false'; // Default: no mostrar si no hay dato
-  
+
+  // Elegibilidad para "Yo pago mis tramites" con bonificacion +0.8% (BNPL + Valle de Aburra)
+  const tramitesClienteBnplEligible = isTramitesClienteBnplEligible(bnplPrices);
+  const areaValleAburra = tramitesClienteBnplEligible ? 'true' : 'false';
+
   // Filtrar secciones visibles basándose en dependencias
   const visibleSections = useMemo(() => {
-    return getVisibleSections(sections, { modalidadVenta, bnplEnabled, razonVentaLiquidez });
-  }, [sections, modalidadVenta, bnplEnabled, razonVentaLiquidez]);
+    return getVisibleSections(sections, { modalidadVenta, bnplEnabled, razonVentaLiquidez, areaValleAburra });
+  }, [sections, modalidadVenta, bnplEnabled, razonVentaLiquidez, areaValleAburra]);
   
   // ─── Analytics: trackear secciones visibles en viewport ───
   const trackedSectionsRef = useRef<Set<string>>(new Set());
@@ -294,7 +316,7 @@ export default function SectionRenderer(props: SectionRendererProps) {
           return null;
         }
         
-        const componentProps = getComponentProps(section, props);
+        const componentProps = getComponentProps(section, props, tramitesClienteBnplEligible);
         
         return (
           <div key={section.id} ref={(node) => sectionRefCallback(node, section.id)} data-section={section.id} data-country={country}>

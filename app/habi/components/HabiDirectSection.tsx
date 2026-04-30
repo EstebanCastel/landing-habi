@@ -7,7 +7,7 @@ import PersonalAdvisor from './PersonalAdvisor';
 import Modal from './Modal';
 import ExpenseCalculator from './calculator/ExpenseCalculator';
 import type { HeshCostBreakdown } from '../../api/hesh/route';
-import type { HubSpotProperties } from '../../lib/hubspot';
+import { TRAMITES_CLIENTE_BNPL_BONUS_PCT, type HubSpotProperties } from '../../lib/hubspot';
 import { analytics } from '../../lib/analytics';
 
 interface HabiDirectSectionProps {
@@ -24,6 +24,7 @@ interface HabiDirectSectionProps {
   showCostToggles?: boolean;
   showDonation?: boolean;
   bnplPrices?: HubSpotProperties | null;
+  isTramitesClienteBnplEligible?: boolean;
 }
 
 // Componente de resumen de precio estilo Tesla
@@ -36,7 +37,8 @@ function PricingSummary({
   formatPrice,
   whatsappAsesor,
   costBreakdown,
-  bnplPrices
+  bnplPrices,
+  isTramitesClienteBnplEligible = false,
 }: { 
   currentPrice: number;
   finalPrice: number;
@@ -47,6 +49,7 @@ function PricingSummary({
   whatsappAsesor?: string;
   costBreakdown?: HeshCostBreakdown;
   bnplPrices?: HubSpotProperties | null;
+  isTramitesClienteBnplEligible?: boolean;
 }) {
   const [showDetails, setShowDetails] = useState(false);
 
@@ -94,8 +97,29 @@ function PricingSummary({
   const gananciaHabiHesh = costBreakdown
     ? costBreakdown.tarifaServicio.total
     : valorMercado * 0.05;
-  const costosTramites = configuration.tramites === 'habi' 
-    ? (costBreakdown ? costBreakdown.tramites.total : (valorMercado * COSTOS_PERCENTAGES.tramites) / 100)
+  const isTramitesClienteBnpl = isTramitesClienteBnplEligible && configuration.tramites === 'cliente';
+  const costosTramitesRaw = costBreakdown
+    ? costBreakdown.tramites.total
+    : (valorMercado * COSTOS_PERCENTAGES.tramites) / 100;
+  // Para BNPL Valle de Aburra mostramos el rubro tachado (estilo alianza), no lo ocultamos
+  const costosTramites = configuration.tramites === 'habi' || isTramitesClienteBnpl
+    ? costosTramitesRaw
+    : 0;
+  // Bonificacion +0.8% sobre la cuota seleccionada (solo BNPL Valle de Aburra)
+  // Se calcula sobre el precio crudo de la cuota (antes del +0.8%) para coincidir con calculatePrice
+  const precioCuotaCrudaBnpl = (() => {
+    if (!isTramitesClienteBnpl || !bnplPrices) return 0;
+    const map: Record<string, string | undefined> = {
+      contado: bnplPrices.precio_comite,
+      '3cuotas': bnplPrices.bnpl3,
+      '6cuotas': bnplPrices.bnpl6,
+      '9cuotas': bnplPrices.bnpl9,
+    };
+    const v = Number(map[configuration.formaPago] || 0);
+    return v > 0 ? v : Number(bnplPrices.precio_comite || 0);
+  })();
+  const tramitesClienteBnplBonus = isTramitesClienteBnpl
+    ? Math.round(precioCuotaCrudaBnpl * (TRAMITES_CLIENTE_BNPL_BONUS_PCT / 100))
     : 0;
   const costosRemodelacion = configuration.remodelacion === 'habi' 
     ? (costBreakdown ? costBreakdown.remodelacion.total : (valorMercado * COSTOS_PERCENTAGES.remodelacion) / 100)
@@ -114,11 +138,18 @@ function PricingSummary({
   const precioContadoSummary = isMxSummary ? precioComiteOriginal : Number(bnplPrices?.precio_comite || 0);
   const costoFinanciacionSummaryBase = costBreakdown ? costBreakdown.tarifaServicio.costoFinanciacion : valorMercado * 0.03;
   const utilidadPctSummaryBase = costBreakdown ? costBreakdown.tarifaServicio.utilidadEsperada : 0.032;
-  const baseSummary = costBreakdown && precioContadoSummary > 0
+  // Para evaluacion usar costos completos (sin toggles): tramites/remodelacion siempre full
+  const tramitesEvaluacion = costBreakdown
+    ? costBreakdown.tramites.total
+    : (valorMercado * COSTOS_PERCENTAGES.tramites) / 100;
+  const remodelacionEvaluacion = costBreakdown
+    ? costBreakdown.remodelacion.total
+    : (valorMercado * COSTOS_PERCENTAGES.remodelacion) / 100;
+  const baseSummary = precioContadoSummary > 0
     ? precioContadoSummary + comisionTotal + propertyMensual + costoFinanciacionSummaryBase +
-      (costBreakdown.tramites.total) + (costBreakdown.remodelacion.total)
+      tramitesEvaluacion + remodelacionEvaluacion
     : valorMercado;
-  const evaluacionInmueble = utilidadPctSummaryBase < 1 && baseSummary !== valorMercado
+  const evaluacionInmueble = utilidadPctSummaryBase < 1 && precioContadoSummary > 0
     ? Math.round(baseSummary / (1 - utilidadPctSummaryBase))
     : valorMercado;
 
@@ -223,6 +254,8 @@ function PricingSummary({
               <span className="text-gray-600">{isMx ? 'Costos operativos' : 'Trámites y notarías'}</span>
               {isAlianza ? (
                 <span className="text-green-600">$0 (incluido)</span>
+              ) : isTramitesClienteBnpl ? (
+                <span className="text-green-600">- {formatPrice(Math.max(0, costosTramites - tramitesClienteBnplBonus))}</span>
               ) : (
                 <span className="text-gray-600">- {formatPrice(costosTramites)}</span>
               )}
@@ -240,10 +273,12 @@ function PricingSummary({
               <span className="text-green-600">+ {formatPrice(bonificacionPago)}</span>
             </div>
           )}
-          {configuration.tramites === 'cliente' && (
+          {configuration.tramites === 'cliente' && !isTramitesClienteBnpl && (
             <div className="flex justify-between text-sm">
               <span className="text-gray-600">Trámites (los pagas tú)</span>
-              <span className="text-green-600">+ {formatPrice((valorMercado * COSTOS_PERCENTAGES.tramites) / 100)}</span>
+              <span className="text-green-600">
+                + {formatPrice((valorMercado * COSTOS_PERCENTAGES.tramites) / 100)}
+              </span>
             </div>
           )}
           {configuration.remodelacion === 'cliente' && (
@@ -359,10 +394,29 @@ export default function HabiDirectSection({
   showCostToggles = false,
   showDonation = true,
   bnplPrices,
+  isTramitesClienteBnplEligible = false,
 }: HabiDirectSectionProps) {
   const [showExpenseCalculator, setShowExpenseCalculator] = useState(false);
   const isMx = bnplPrices?.country === 'MX';
   const isAlianza = !isMx && bnplPrices?.quiere_ofertar_alianza?.toLowerCase().trim() === 'si';
+  const isTramitesClienteBnpl = isTramitesClienteBnplEligible && configuration.tramites === 'cliente';
+
+  // Bonificacion +0.8% sobre la cuota seleccionada (solo BNPL Valle de Aburra).
+  // Se calcula sobre el precio CRUDO de la cuota (sin el +0.8%) para coincidir con calculatePrice.
+  const precioCuotaCrudaBnplMain = (() => {
+    if (!isTramitesClienteBnpl || !bnplPrices) return 0;
+    const map: Record<string, string | undefined> = {
+      contado: bnplPrices.precio_comite,
+      '3cuotas': bnplPrices.bnpl3,
+      '6cuotas': bnplPrices.bnpl6,
+      '9cuotas': bnplPrices.bnpl9,
+    };
+    const v = Number(map[configuration.formaPago] || 0);
+    return v > 0 ? v : Number(bnplPrices.precio_comite || 0);
+  })();
+  const tramitesClienteBnplBonusMain = isTramitesClienteBnpl
+    ? Math.round(precioCuotaCrudaBnplMain * (TRAMITES_CLIENTE_BNPL_BONUS_PCT / 100))
+    : 0;
   
   // Precio final con donación descontada
   const finalPrice = currentPrice - donationAmount;
@@ -431,7 +485,9 @@ export default function HabiDirectSection({
   // CO: precio_comite (precio de contado / 1 cuota)
   const precioContadoCO = bnplPrices ? Number(bnplPrices.precio_comite || 0) : currentPrice;
   const precioBaseEvaluacion = isMx ? precioComiteOriginalMain : precioContadoCO;
-  const baseSinComisionHabi = costBreakdown && precioBaseEvaluacion > 0
+  // costos* ya tienen fallback a COSTOS_PERCENTAGES * valorMercado cuando HESH no esta disponible,
+  // asi que la formula de evaluacion funciona en ambos casos.
+  const baseSinComisionHabi = precioBaseEvaluacion > 0
     ? precioBaseEvaluacion + comisionTotal + propertyMensual + costoFinanciacionHesh + costosTramites + costosRemodelacion
     : valorMercado;
   
@@ -750,7 +806,7 @@ export default function HabiDirectSection({
           {/* Trámites y notarías / Costos operativos */}
           <div className="flex justify-between items-start pb-3 border-b border-gray-100">
             <div className="flex-1">
-              <p className={`font-medium text-sm mb-2 ${configuration.tramites === 'cliente' ? 'text-gray-400' : ''}`}>
+              <p className={`font-medium text-sm mb-2 ${(configuration.tramites === 'cliente' && !isTramitesClienteBnpl) ? 'text-gray-400' : ''}`}>
                 {isMx ? 'Costos operativos' : 'Trámites y notarías'}
               </p>
               {isAlianza ? (
@@ -760,6 +816,18 @@ export default function HabiDirectSection({
                   </p>
                   <p className="text-xs text-gray-500">
                     Gastos legales y notariales que Habi asume por ti gracias a nuestras alianzas.
+                  </p>
+                </>
+              ) : isTramitesClienteBnpl ? (
+                <>
+                  <p className="text-xs text-green-600 font-medium mb-1">
+                    Tú te harás cargo de estos gastos.
+                  </p>
+                  <p className="text-xs text-gray-600 mb-1">
+                    El 50% de la gobernación, los valores de estampilla y los derechos notariales (0.3%).
+                  </p>
+                  <p className="text-[11px] text-gray-500 italic">
+                    *Los gastos notariales —copias, autenticaciones, certificados web y similares— dependen de los documentos que van en la escritura, por lo que su valor exacto solo se conoce el día de la notaría.
                   </p>
                 </>
               ) : configuration.tramites === 'cliente' ? (
@@ -779,6 +847,11 @@ export default function HabiDirectSection({
                 <>
                   <p className="font-semibold text-green-600">$0</p>
                   <p className="text-xs text-green-500 line-through">{formatPrice(costosTramites)}</p>
+                </>
+              ) : isTramitesClienteBnpl ? (
+                <>
+                  <p className="font-semibold text-green-600">{formatPrice(Math.max(0, costosTramites - tramitesClienteBnplBonusMain))}</p>
+                  <p className="text-xs text-gray-400 line-through">{formatPrice(costosTramites)}</p>
                 </>
               ) : configuration.tramites === 'cliente' ? (
                 <>
@@ -849,6 +922,7 @@ export default function HabiDirectSection({
         whatsappAsesor={whatsappAsesor}
         costBreakdown={costBreakdown || undefined}
         bnplPrices={bnplPrices}
+        isTramitesClienteBnplEligible={isTramitesClienteBnplEligible}
       />
 
       {/* Modal de Calculadora de Gastos */}

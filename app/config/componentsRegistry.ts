@@ -10,6 +10,7 @@ export const componentsRegistry: Record<string, ComponentType<any>> = {
   PaymentOptions: dynamic(() => import('../habi/components/PaymentOptions')),
   LiquiditySection: dynamic(() => import('../habi/components/LiquiditySection')),
   HabiDirectSection: dynamic(() => import('../habi/components/HabiDirectSection')),
+  TramitesClienteBnplSection: dynamic(() => import('../habi/components/TramitesClienteBnplSection')),
   InmobiliariaSection: dynamic(() => import('../habi/components/InmobiliariaSection')),
   SellByYourselfSection: dynamic(() => import('../habi/components/SellByYourselfSection')),
   PersonalAdvisor: dynamic(() => import('../habi/components/PersonalAdvisor')),

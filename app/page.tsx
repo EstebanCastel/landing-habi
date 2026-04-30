@@ -13,7 +13,7 @@ import StickyPrice from './habi/components/StickyPrice';
 import AIAssistant from './habi/components/AIAssistant';
 import LandingB from './landing-b/LandingB';
 import { HabiConfiguration, PAYMENT_OPTIONS, COSTOS_PERCENTAGES } from './types/habi';
-import { getHubSpotProperties, type HubSpotProperties } from './lib/hubspot';
+import { getHubSpotProperties, isTramitesClienteBnplEligible, TRAMITES_CLIENTE_BNPL_BONUS_PCT, type HubSpotProperties } from './lib/hubspot';
 import { analytics, initScrollTracking, initPageTimeTracking } from './lib/analytics';
 import type { HeshCostBreakdown } from './api/hesh/route';
 import GoogleAnalytics from './components/google-analytics';
@@ -684,9 +684,15 @@ function HomeContent() {
       // Si el valor BNPL es 0 o no existe, usar precio_comite como fallback
       const numValue = Number(value || 0);
       let price = Math.round(numValue > 0 ? numValue : Number(bnplPrices.precio_comite || 0));
-      
-      // Si el usuario elige pagar trámites, sumar el costo real de trámites
-      if (configuration.tramites === 'cliente' && costBreakdown) {
+
+      // Caso especial: BNPL + Valle de Aburra. Si el cliente paga sus tramites,
+      // NO se suma el costo HESH, sino que se aplica un +0.8% sobre la cuota seleccionada.
+      const tramitesClienteBnpl = configuration.tramites === 'cliente'
+        && isTramitesClienteBnplEligible(bnplPrices);
+
+      if (tramitesClienteBnpl) {
+        price = Math.round(price * (1 + TRAMITES_CLIENTE_BNPL_BONUS_PCT / 100));
+      } else if (configuration.tramites === 'cliente' && costBreakdown) {
         price += Math.round(costBreakdown.tramites.total);
       }
       // Si el usuario elige hacer remodelaciones, sumar ese costo
