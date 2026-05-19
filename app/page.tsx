@@ -295,9 +295,9 @@ function HomeContent() {
     if (forceGroup && ['A', 'B', 'C', 'D'].includes(forceGroup)) {
       group = forceGroup;
     } else if (country === 'MX') {
-      // MX: 33% A, 33% B, 34% C
+      // MX: 95% B, 5% C
       const h = hashUuid(dealUuid) % 100;
-      group = h < 33 ? 'A' : h < 66 ? 'B' : 'C';
+      group = h < 95 ? 'B' : 'C';
     } else {
       // CO: 100% C
       group = 'C';
